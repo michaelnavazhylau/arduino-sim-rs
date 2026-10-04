@@ -54,6 +54,7 @@ jobs:
       # AVR_SIM_REQUIRE_ARDUINO_CLI turns the test's toolchain skip into a
       # failure, so a broken install cannot silently pass this gate.
       - name: Run compiled ATmega328P firmware on the native backend
+        working-directory: rust_port
         env:
           AVR_SIM_REQUIRE_ARDUINO_CLI: '1'
         run: |
