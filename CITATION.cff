@@ -1,0 +1,34 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it using the metadata below."
+title: "arduino-sim-rs: a native Rust AVR8 simulator compatibility port"
+abstract: >-
+  A dependency-free Rust implementation of an AVR8 (ATmega328P-class) simulator,
+  validated against the AVR8js behavioral test suite and against firmware
+  compiled by arduino-cli for Arduino UNO boards.
+type: software
+authors:
+  - family-names: Navazhylau
+    given-names: Michael
+license: MIT
+repository-code: "https://github.com/michaelnavazhylau/arduino-sim-rs"
+url: "https://github.com/michaelnavazhylau/arduino-sim-rs"
+keywords:
+  - AVR
+  - ATmega328P
+  - AVR8js
+  - simulator
+  - emulator
+  - Rust
+  - Arduino
+  - embedded
+references:
+  - type: software
+    title: "AVR8js: AVR 8-bit microcontroller simulator in TypeScript"
+    authors:
+      - family-names: Shaked
+        given-names: Uri
+    repository-code: "https://github.com/wokwi/avr8js"
+    license: MIT
+    notes: >-
+      Upstream reference for this compatibility port; the converted behavioral
+      suites and the decoder logic are derived from it.

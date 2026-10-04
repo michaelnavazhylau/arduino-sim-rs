@@ -42,6 +42,14 @@ See [`rust_port/README.md`](rust_port/README.md) for checks and regeneration, an
 and residual limitations. Downloaded vendor PDFs/text and build dependencies
 are excluded from Git; their pinned provenance and fetch/check tools are included.
 
-The Rust port and derived tests retain the upstream MIT attribution in
-[`rust_port/LICENSE`](rust_port/LICENSE). AVR8js retains its own license; vendor
-specification documents retain their vendor licensing.
+## License and citation
+
+Released under the [MIT License](LICENSE). Portions are derived from
+[AVR8js](https://github.com/wokwi/avr8js) — MIT, Copyright (c) 2019-2025 Uri
+Shaked — whose notice is retained in [`rust_port/LICENSE`](rust_port/LICENSE) and
+reproduced in [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md). Microchip
+datasheets referenced under `rust_port/specs/` keep their vendor terms and are
+not redistributed. The Arduino AVR core and `arduino-cli` used by the test suite
+are installed at test time and are not part of this repository either.
+
+To cite this project, use [`CITATION.cff`](CITATION.cff).
