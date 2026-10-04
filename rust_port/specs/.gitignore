@@ -1,0 +1,4 @@
+# Downloaded vendor documents and generated searchable text stay local.
+# Reproduce and verify them with ../tools/specs.py and sources.json.
+/pdf/
+/text/

@@ -1,0 +1,3 @@
+[submodule "avr8js"]
+	path = avr8js
+	url = https://github.com/wokwi/avr8js.git

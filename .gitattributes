@@ -1,0 +1,2 @@
+# Generated scenarios preserve whitespace inside upstream assembly fixtures.
+rust_port/src/suites/*.rs linguist-generated=true -whitespace

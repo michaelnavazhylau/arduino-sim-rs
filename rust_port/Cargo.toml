@@ -1,0 +1,8 @@
+[package]
+name = "avr-port-tests"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+description = "Native Rust behavioral contract for the AVR8js language port"
+
+[dependencies]

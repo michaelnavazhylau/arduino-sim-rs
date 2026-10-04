@@ -1,0 +1,2280 @@
+{
+  "format": 1,
+  "suites": 14,
+  "cases": 347,
+  "assertions": 853,
+  "files": [
+    {
+      "source": "src/cpu/cpu.spec.ts",
+      "sha256": "f18f1cf80091c8e63b7bfd904e59d6ec745382268c6e3c7642a0f81053ebe4dc",
+      "module": "cpu_cpu",
+      "imports": [
+        "CPU"
+      ],
+      "cases": [
+        {
+          "id": "case_001_should_set_initial_value_of_sp_to_the_last_byte_of_internal_sram",
+          "name": "cpu / should set initial value of SP to the last byte of internal SRAM",
+          "line": 7,
+          "assertions": 1
+        },
+        {
+          "id": "case_002_should_execute_queued_events_after_the_given_number_of_cycles_has_passed",
+          "name": "cpu / events / should execute queued events after the given number of cycles has passed",
+          "line": 13,
+          "assertions": 1
+        },
+        {
+          "id": "case_003_should_correctly_sort_the_events_when_added_in_reverse_order",
+          "name": "cpu / events / should correctly sort the events when added in reverse order",
+          "line": 30,
+          "assertions": 1
+        },
+        {
+          "id": "case_004_should_update_the_number_of_cycles_for_the_given_clock_event",
+          "name": "cpu / events / updateClockEvent / should update the number of cycles for the given clock event",
+          "line": 48,
+          "assertions": 1
+        },
+        {
+          "id": "case_005_should_remove_the_given_clock_event",
+          "name": "cpu / events / updateClockEvent / clearClockEvent / should remove the given clock event",
+          "line": 69,
+          "assertions": 1
+        },
+        {
+          "id": "case_006_should_return_false_if_the_provided_clock_event_is_not_scheduled",
+          "name": "cpu / events / updateClockEvent / clearClockEvent / should return false if the provided clock event is not scheduled",
+          "line": 87,
+          "assertions": 4
+        }
+      ]
+    },
+    {
+      "source": "src/cpu/instruction.spec.ts",
+      "sha256": "f3ea73a8a804d439a0aadc305516a8923e7d1606d2fb77cd5819726a8aa2f531",
+      "module": "cpu_instruction",
+      "imports": [
+        "assemble",
+        "CPU",
+        "avrInstruction"
+      ],
+      "cases": [
+        {
+          "id": "case_001_should_execute_adc_r0_r1_instruction_when_carry_is_on",
+          "name": "avrInstruction / should execute `ADC r0, r1` instruction when carry is on",
+          "line": 63,
+          "assertions": 4
+        },
+        {
+          "id": "case_002_should_execute_adc_r0_r1_instruction_when_carry_is_on_and_the_result_overflows",
+          "name": "avrInstruction / should execute `ADC r0, r1` instruction when carry is on and the result overflows",
+          "line": 75,
+          "assertions": 4
+        },
+        {
+          "id": "case_003_should_execute_add_r0_r1_instruction_when_result_overflows",
+          "name": "avrInstruction / should execute `ADD r0, r1` instruction when result overflows",
+          "line": 87,
+          "assertions": 4
+        },
+        {
+          "id": "case_004_should_execute_add_r0_r1_instruction_when_carry_is_on",
+          "name": "avrInstruction / should execute `ADD r0, r1` instruction when carry is on",
+          "line": 98,
+          "assertions": 4
+        },
+        {
+          "id": "case_005_should_execute_add_r0_r1_instruction_when_carry_is_on_and_the_result_overflows",
+          "name": "avrInstruction / should execute `ADD r0, r1` instruction when carry is on and the result overflows",
+          "line": 110,
+          "assertions": 4
+        },
+        {
+          "id": "case_006_should_execute_bclr_2_instruction",
+          "name": "avrInstruction / should execute `BCLR 2` instruction",
+          "line": 126,
+          "assertions": 3
+        },
+        {
+          "id": "case_007_should_execute_bld_r4_7_instruction",
+          "name": "avrInstruction / should execute `BLD r4, 7` instruction",
+          "line": 135,
+          "assertions": 4
+        },
+        {
+          "id": "case_008_should_execute_brbc_0_8_instruction_when_sreg_c_is_clear",
+          "name": "avrInstruction / should execute `BRBC 0, +8` instruction when SREG.C is clear",
+          "line": 146,
+          "assertions": 2
+        },
+        {
+          "id": "case_009_should_execute_brbc_0_8_instruction_when_sreg_c_is_set",
+          "name": "avrInstruction / should execute `BRBC 0, +8` instruction when SREG.C is set",
+          "line": 154,
+          "assertions": 2
+        },
+        {
+          "id": "case_010_should_execute_brbs_3_92_instruction_when_sreg_v_is_set",
+          "name": "avrInstruction / should execute `BRBS 3, 92` instruction when SREG.V is set",
+          "line": 162,
+          "assertions": 2
+        },
+        {
+          "id": "case_011_should_execute_brbs_3_4_instruction_when_sreg_v_is_set",
+          "name": "avrInstruction / should execute `BRBS 3, -4` instruction when SREG.V is set",
+          "line": 170,
+          "assertions": 2
+        },
+        {
+          "id": "case_012_should_execute_brbs_3_4_instruction_when_sreg_v_is_clear",
+          "name": "avrInstruction / should execute `BRBS 3, -4` instruction when SREG.V is clear",
+          "line": 179,
+          "assertions": 2
+        },
+        {
+          "id": "case_013_should_execute_call_instruction",
+          "name": "avrInstruction / should execute `CALL` instruction",
+          "line": 192,
+          "assertions": 4
+        },
+        {
+          "id": "case_014_should_push_3_byte_return_address_when_executing_call_instruction_on_device_with_128k_flash",
+          "name": "avrInstruction / should push 3-byte return address when executing `CALL` instruction on device with >128k flash",
+          "line": 203,
+          "assertions": 4
+        },
+        {
+          "id": "case_015_should_execute_cbi_0x0c_5",
+          "name": "avrInstruction / should execute `CBI 0x0c, 5`",
+          "line": 215,
+          "assertions": 3
+        },
+        {
+          "id": "case_016_should_execute_cpc_r27_r18_instruction",
+          "name": "avrInstruction / should execute `CPC r27, r18` instruction",
+          "line": 228,
+          "assertions": 3
+        },
+        {
+          "id": "case_017_should_execute_cpc_r24_r1_instruction_and_set",
+          "name": "avrInstruction / should execute `CPC r24, r1` instruction and set",
+          "line": 238,
+          "assertions": 3
+        },
+        {
+          "id": "case_018_should_execute_cpi_r26_0x9_instruction",
+          "name": "avrInstruction / should execute `CPI r26, 0x9` instruction",
+          "line": 249,
+          "assertions": 3
+        },
+        {
+          "id": "case_019_should_execute_cpse_r2_r3_when_r2_r3",
+          "name": "avrInstruction / should execute `CPSE r2, r3` when r2 != r3",
+          "line": 258,
+          "assertions": 2
+        },
+        {
+          "id": "case_020_should_execute_cpse_r2_r3_when_r2_r3",
+          "name": "avrInstruction / should execute `CPSE r2, r3` when r2 == r3",
+          "line": 267,
+          "assertions": 2
+        },
+        {
+          "id": "case_021_should_execute_cpse_r2_r3_when_r2_r3_and_followed_by_2_word_instruction",
+          "name": "avrInstruction / should execute `CPSE r2, r3` when r2 == r3 and followed by 2-word instruction",
+          "line": 276,
+          "assertions": 2
+        },
+        {
+          "id": "case_022_should_execute_eicall_instruction",
+          "name": "avrInstruction / should execute `EICALL` instruction",
+          "line": 289,
+          "assertions": 4
+        },
+        {
+          "id": "case_023_should_execute_eijmp_instruction",
+          "name": "avrInstruction / should execute `EIJMP` instruction",
+          "line": 303,
+          "assertions": 2
+        },
+        {
+          "id": "case_024_should_execute_elpm_instruction",
+          "name": "avrInstruction / should execute `ELPM` instruction",
+          "line": 313,
+          "assertions": 3
+        },
+        {
+          "id": "case_025_should_execute_elpm_r5_z_instruction",
+          "name": "avrInstruction / should execute `ELPM r5, Z` instruction",
+          "line": 325,
+          "assertions": 3
+        },
+        {
+          "id": "case_026_should_execute_elpm_r6_z_instruction",
+          "name": "avrInstruction / should execute `ELPM r6, Z+` instruction",
+          "line": 337,
+          "assertions": 5
+        },
+        {
+          "id": "case_027_should_clamp_rampz_when_executing_elpm_r6_z_instruction",
+          "name": "avrInstruction / should clamp RAMPZ when executing `ELPM r6, Z+` instruction",
+          "line": 351,
+          "assertions": 1
+        },
+        {
+          "id": "case_028_should_execute_icall_instruction",
+          "name": "avrInstruction / should execute `ICALL` instruction",
+          "line": 364,
+          "assertions": 4
+        },
+        {
+          "id": "case_029_should_push_3_byte_return_address_when_executing_icall_instruction_on_device_with_128k_flash",
+          "name": "avrInstruction / should push 3-byte return address when executing `ICALL` instruction on device with >128k flash",
+          "line": 376,
+          "assertions": 4
+        },
+        {
+          "id": "case_030_should_execute_ijmp_instruction",
+          "name": "avrInstruction / should execute `IJMP` instruction",
+          "line": 389,
+          "assertions": 2
+        },
+        {
+          "id": "case_031_should_execute_in_r5_0xb_instruction",
+          "name": "avrInstruction / should execute `IN r5, 0xb` instruction",
+          "line": 397,
+          "assertions": 3
+        },
+        {
+          "id": "case_032_should_execute_inc_r5_instruction",
+          "name": "avrInstruction / should execute `INC r5` instruction",
+          "line": 406,
+          "assertions": 4
+        },
+        {
+          "id": "case_033_should_execute_inc_r5_instruction_when_r5_0xff",
+          "name": "avrInstruction / should execute `INC r5` instruction when r5 == 0xff",
+          "line": 416,
+          "assertions": 4
+        },
+        {
+          "id": "case_034_should_execute_jmp_0xb8_instruction",
+          "name": "avrInstruction / should execute `JMP 0xb8` instruction",
+          "line": 426,
+          "assertions": 2
+        },
+        {
+          "id": "case_035_should_execute_lac_z_r19_instruction",
+          "name": "avrInstruction / should execute `LAC Z, r19` instruction",
+          "line": 433,
+          "assertions": 5
+        },
+        {
+          "id": "case_036_should_execute_las_z_r17_instruction",
+          "name": "avrInstruction / should execute `LAS Z, r17` instruction",
+          "line": 446,
+          "assertions": 5
+        },
+        {
+          "id": "case_037_should_execute_lat_z_r0_instruction",
+          "name": "avrInstruction / should execute `LAT Z, r0` instruction",
+          "line": 459,
+          "assertions": 5
+        },
+        {
+          "id": "case_038_should_execute_ld_r1_x_instruction",
+          "name": "avrInstruction / should execute `LD r1, X` instruction",
+          "line": 472,
+          "assertions": 4
+        },
+        {
+          "id": "case_039_should_execute_ld_r17_x_instruction",
+          "name": "avrInstruction / should execute `LD r17, X+` instruction",
+          "line": 483,
+          "assertions": 4
+        },
+        {
+          "id": "case_040_should_execute_ld_r1_x_instruction",
+          "name": "avrInstruction / should execute `LD r1, -X` instruction",
+          "line": 494,
+          "assertions": 4
+        },
+        {
+          "id": "case_041_should_execute_ld_r8_y_instruction",
+          "name": "avrInstruction / should execute `LD r8, Y` instruction",
+          "line": 505,
+          "assertions": 4
+        },
+        {
+          "id": "case_042_should_execute_ld_r3_y_instruction",
+          "name": "avrInstruction / should execute `LD r3, Y+` instruction",
+          "line": 516,
+          "assertions": 4
+        },
+        {
+          "id": "case_043_should_execute_ld_r0_y_instruction",
+          "name": "avrInstruction / should execute `LD r0, -Y` instruction",
+          "line": 527,
+          "assertions": 4
+        },
+        {
+          "id": "case_044_should_execute_ldd_r4_y_2_instruction",
+          "name": "avrInstruction / should execute `LDD r4, Y+2` instruction",
+          "line": 538,
+          "assertions": 4
+        },
+        {
+          "id": "case_045_should_execute_ld_r5_z_instruction",
+          "name": "avrInstruction / should execute `LD r5, Z` instruction",
+          "line": 549,
+          "assertions": 4
+        },
+        {
+          "id": "case_046_should_execute_ld_r7_z_instruction",
+          "name": "avrInstruction / should execute `LD r7, Z+` instruction",
+          "line": 560,
+          "assertions": 4
+        },
+        {
+          "id": "case_047_should_execute_ld_r0_z_instruction",
+          "name": "avrInstruction / should execute `LD r0, -Z` instruction",
+          "line": 571,
+          "assertions": 4
+        },
+        {
+          "id": "case_048_should_execute_ldd_r15_z_31_instruction",
+          "name": "avrInstruction / should execute `LDD r15, Z+31` instruction",
+          "line": 582,
+          "assertions": 4
+        },
+        {
+          "id": "case_049_should_execute_ldi_r28_0xff_instruction",
+          "name": "avrInstruction / should execute `LDI r28, 0xff` instruction",
+          "line": 593,
+          "assertions": 3
+        },
+        {
+          "id": "case_050_should_execute_lds_r5_0x150_instruction",
+          "name": "avrInstruction / should execute `LDS r5, 0x150` instruction",
+          "line": 601,
+          "assertions": 3
+        },
+        {
+          "id": "case_051_should_execute_lpm_instruction",
+          "name": "avrInstruction / should execute `LPM` instruction",
+          "line": 614,
+          "assertions": 4
+        },
+        {
+          "id": "case_052_should_execute_lpm_r2_z_instruction",
+          "name": "avrInstruction / should execute `LPM r2, Z` instruction",
+          "line": 625,
+          "assertions": 4
+        },
+        {
+          "id": "case_053_should_execute_lpm_r1_z_instruction",
+          "name": "avrInstruction / should execute `LPM r1, Z+` instruction",
+          "line": 636,
+          "assertions": 4
+        },
+        {
+          "id": "case_054_should_execute_lsr_r7_instruction",
+          "name": "avrInstruction / should execute `LSR r7` instruction",
+          "line": 651,
+          "assertions": 4
+        },
+        {
+          "id": "case_055_should_execute_mov_r7_r8_instruction",
+          "name": "avrInstruction / should execute `MOV r7, r8` instruction",
+          "line": 661,
+          "assertions": 3
+        },
+        {
+          "id": "case_056_should_execute_movw_r26_r22_instruction",
+          "name": "avrInstruction / should execute `MOVW r26, r22` instruction",
+          "line": 670,
+          "assertions": 4
+        },
+        {
+          "id": "case_057_should_execute_mul_r5_r6_instruction",
+          "name": "avrInstruction / should execute `MUL r5, r6` instruction",
+          "line": 681,
+          "assertions": 4
+        },
+        {
+          "id": "case_058_should_execute_mul_r5_r6_instruction_and_update_carry_flag_when_numbers_are_big",
+          "name": "avrInstruction / should execute `MUL r5, r6` instruction and update carry flag when numbers are big",
+          "line": 692,
+          "assertions": 4
+        },
+        {
+          "id": "case_059_should_execute_mul_r0_r1_and_update_the_zero_flag",
+          "name": "avrInstruction / should execute `MUL r0, r1` and update the zero flag",
+          "line": 703,
+          "assertions": 4
+        },
+        {
+          "id": "case_060_should_execute_muls_r18_r19_instruction",
+          "name": "avrInstruction / should execute `MULS r18, r19` instruction",
+          "line": 714,
+          "assertions": 4
+        },
+        {
+          "id": "case_061_should_execute_mulsu_r16_r17_instruction",
+          "name": "avrInstruction / should execute `MULSU r16, r17` instruction",
+          "line": 725,
+          "assertions": 4
+        },
+        {
+          "id": "case_062_should_execute_neg_r20_instruction",
+          "name": "avrInstruction / should execute `NEG r20` instruction",
+          "line": 736,
+          "assertions": 4
+        },
+        {
+          "id": "case_063_should_execute_nop_instruction",
+          "name": "avrInstruction / should execute `NOP` instruction",
+          "line": 746,
+          "assertions": 2
+        },
+        {
+          "id": "case_064_should_execute_out_0x3f_r1_instruction",
+          "name": "avrInstruction / should execute `OUT 0x3f, r1` instruction",
+          "line": 757,
+          "assertions": 3
+        },
+        {
+          "id": "case_065_should_execute_pop_r26_instruction",
+          "name": "avrInstruction / should execute `POP r26` instruction",
+          "line": 766,
+          "assertions": 4
+        },
+        {
+          "id": "case_066_should_execute_push_r11_instruction",
+          "name": "avrInstruction / should execute `PUSH r11` instruction",
+          "line": 778,
+          "assertions": 4
+        },
+        {
+          "id": "case_067_should_execute_rcall_6_instruction",
+          "name": "avrInstruction / should execute `RCALL .+6` instruction",
+          "line": 790,
+          "assertions": 4
+        },
+        {
+          "id": "case_068_should_execute_rcall_4_instruction",
+          "name": "avrInstruction / should execute `RCALL .-4` instruction",
+          "line": 801,
+          "assertions": 4
+        },
+        {
+          "id": "case_069_should_push_3_byte_return_address_when_executing_rcall_instruction_on_device_with_128k_flash",
+          "name": "avrInstruction / should push 3-byte return address when executing `RCALL` instruction on device with >128k flash",
+          "line": 813,
+          "assertions": 4
+        },
+        {
+          "id": "case_070_should_execute_ret_instruction",
+          "name": "avrInstruction / should execute `RET` instruction",
+          "line": 826,
+          "assertions": 3
+        },
+        {
+          "id": "case_071_should_execute_ret_instruction_on_device_with_128k_flash",
+          "name": "avrInstruction / should execute `RET` instruction on device with >128k flash",
+          "line": 837,
+          "assertions": 3
+        },
+        {
+          "id": "case_072_should_execute_reti_instruction",
+          "name": "avrInstruction / should execute `RETI` instruction",
+          "line": 850,
+          "assertions": 4
+        },
+        {
+          "id": "case_073_should_execute_reti_instruction_on_device_with_128k_flash",
+          "name": "avrInstruction / should execute `RETI` instruction on device with >128k flash",
+          "line": 862,
+          "assertions": 4
+        },
+        {
+          "id": "case_074_should_execute_rjmp_2_instruction",
+          "name": "avrInstruction / should execute `RJMP 2` instruction",
+          "line": 876,
+          "assertions": 2
+        },
+        {
+          "id": "case_075_should_execute_ror_r0_instruction",
+          "name": "avrInstruction / should execute `ROR r0` instruction",
+          "line": 887,
+          "assertions": 4
+        },
+        {
+          "id": "case_076_should_execute_sbc_r0_r1_instruction_when_carry_is_on_and_result_overflows",
+          "name": "avrInstruction / should execute `SBC r0, r1` instruction when carry is on and result overflows",
+          "line": 897,
+          "assertions": 4
+        },
+        {
+          "id": "case_077_should_execute_sbci_r23_3",
+          "name": "avrInstruction / should execute `SBCI r23, 3`",
+          "line": 909,
+          "assertions": 3
+        },
+        {
+          "id": "case_078_should_execute_sbi_0x0c_5",
+          "name": "avrInstruction / should execute `SBI 0x0c, 5`",
+          "line": 919,
+          "assertions": 3
+        },
+        {
+          "id": "case_079_should_execute_sbis_0x0c_5_when_bit_is_clear",
+          "name": "avrInstruction / should execute `SBIS 0x0c, 5` when bit is clear",
+          "line": 932,
+          "assertions": 2
+        },
+        {
+          "id": "case_080_should_execute_sbis_0x0c_5_when_bit_is_set",
+          "name": "avrInstruction / should execute `SBIS 0x0c, 5` when bit is set",
+          "line": 940,
+          "assertions": 2
+        },
+        {
+          "id": "case_081_should_execute_sbis_0x0c_5_when_bit_is_set_and_followed_by_2_word_instruction",
+          "name": "avrInstruction / should execute `SBIS 0x0c, 5` when bit is set and followed by 2-word instruction",
+          "line": 948,
+          "assertions": 2
+        },
+        {
+          "id": "case_082_should_execute_st_x_r1_instruction",
+          "name": "avrInstruction / should execute `ST X, r1` instruction",
+          "line": 961,
+          "assertions": 4
+        },
+        {
+          "id": "case_083_should_execute_st_x_r1_instruction",
+          "name": "avrInstruction / should execute `ST X+, r1` instruction",
+          "line": 972,
+          "assertions": 4
+        },
+        {
+          "id": "case_084_should_execute_st_x_r17_instruction",
+          "name": "avrInstruction / should execute `ST -X, r17` instruction",
+          "line": 983,
+          "assertions": 4
+        },
+        {
+          "id": "case_085_should_execute_st_y_r2_instruction",
+          "name": "avrInstruction / should execute `ST Y, r2` instruction",
+          "line": 994,
+          "assertions": 4
+        },
+        {
+          "id": "case_086_should_execute_st_y_r1_instruction",
+          "name": "avrInstruction / should execute `ST Y+, r1` instruction",
+          "line": 1005,
+          "assertions": 4
+        },
+        {
+          "id": "case_087_should_execute_st_y_r1_instruction",
+          "name": "avrInstruction / should execute `ST -Y, r1` instruction",
+          "line": 1016,
+          "assertions": 4
+        },
+        {
+          "id": "case_088_should_execute_std_y_17_r0_instruction",
+          "name": "avrInstruction / should execute `STD Y+17, r0` instruction",
+          "line": 1027,
+          "assertions": 4
+        },
+        {
+          "id": "case_089_should_execute_st_z_r16_instruction",
+          "name": "avrInstruction / should execute `ST Z, r16` instruction",
+          "line": 1038,
+          "assertions": 4
+        },
+        {
+          "id": "case_090_should_execute_st_z_r0_instruction",
+          "name": "avrInstruction / should execute `ST Z+, r0` instruction",
+          "line": 1049,
+          "assertions": 4
+        },
+        {
+          "id": "case_091_should_execute_st_z_r16_instruction",
+          "name": "avrInstruction / should execute `ST -Z, r16` instruction",
+          "line": 1060,
+          "assertions": 4
+        },
+        {
+          "id": "case_092_should_execute_std_z_1_r0_instruction",
+          "name": "avrInstruction / should execute `STD Z+1, r0` instruction",
+          "line": 1071,
+          "assertions": 4
+        },
+        {
+          "id": "case_093_should_execute_sts_0x151_r31_instruction",
+          "name": "avrInstruction / should execute `STS 0x151, r31` instruction",
+          "line": 1082,
+          "assertions": 3
+        },
+        {
+          "id": "case_094_should_execute_sub_r0_r1_instruction_when_result_overflows",
+          "name": "avrInstruction / should execute `SUB r0, r1` instruction when result overflows",
+          "line": 1095,
+          "assertions": 4
+        },
+        {
+          "id": "case_095_should_execute_swap_r1_instruction",
+          "name": "avrInstruction / should execute `SWAP r1` instruction",
+          "line": 1110,
+          "assertions": 3
+        },
+        {
+          "id": "case_096_should_execute_wdr_instruction_and_call_cpu_onwatchdogreset",
+          "name": "avrInstruction / should execute `WDR` instruction and call `cpu.onWatchdogReset`",
+          "line": 1123,
+          "assertions": 2
+        },
+        {
+          "id": "case_097_should_execute_xch_z_r21_instruction",
+          "name": "avrInstruction / should execute `XCH Z, r21` instruction",
+          "line": 1131,
+          "assertions": 4
+        }
+      ]
+    },
+    {
+      "source": "src/cpu/interrupt.spec.ts",
+      "sha256": "a87c6c0051974faed1a7aea51ba8ee5e99580b0a3aaa3a4eebd79ce42c62fb05",
+      "module": "cpu_interrupt",
+      "imports": [
+        "CPU",
+        "avrInterrupt"
+      ],
+      "cases": [
+        {
+          "id": "case_001_should_execute_interrupt_handler",
+          "name": "avrInterrupt / should execute interrupt handler",
+          "line": 9,
+          "assertions": 6
+        },
+        {
+          "id": "case_002_should_push_a_3_byte_return_address_when_running_in_22_bit_pc_mode_issue_58",
+          "name": "avrInterrupt / should push a 3-byte return address when running in 22-bit PC mode (issue #58)",
+          "line": 24,
+          "assertions": 8
+        }
+      ]
+    },
+    {
+      "source": "src/peripherals/adc.spec.ts",
+      "sha256": "f8f52f2befdfb46543cb9b7637a9f9a9bf4ccbb291dc403626aece3bca766aac",
+      "module": "peripherals_adc",
+      "imports": [
+        "CPU",
+        "asmProgram",
+        "TestProgramRunner",
+        "adcConfig",
+        "ADCMuxInputType",
+        "AVRADC"
+      ],
+      "cases": [
+        {
+          "id": "case_001_should_successfuly_perform_an_adc_conversion",
+          "name": "ADC / should successfuly perform an ADC conversion",
+          "line": 23,
+          "assertions": 2
+        },
+        {
+          "id": "case_002_should_read_0_when_the_adc_peripheral_is_not_enabled",
+          "name": "ADC / should read 0 when the ADC peripheral is not enabled",
+          "line": 76,
+          "assertions": 2
+        }
+      ]
+    },
+    {
+      "source": "src/peripherals/clock.spec.ts",
+      "sha256": "4c2fefe396c29d21c5fd9f94f368f3445569ac875db70236c8eebc8a02eac9ac",
+      "module": "peripherals_clock",
+      "imports": [
+        "CPU",
+        "AVRClock",
+        "clockConfig"
+      ],
+      "cases": [
+        {
+          "id": "case_001_should_set_the_prescaler_when_double_writing_clkpc",
+          "name": "Clock / should set the prescaler when double-writing CLKPC",
+          "line": 15,
+          "assertions": 2
+        },
+        {
+          "id": "case_002_should_not_update_the_prescaler_if_clkpce_was_not_set_clkpc",
+          "name": "Clock / should not update the prescaler if CLKPCE was not set CLKPC",
+          "line": 24,
+          "assertions": 2
+        },
+        {
+          "id": "case_003_should_not_update_the_prescaler_if_more_than_4_cycles_passed_since_setting_clkpce",
+          "name": "Clock / should not update the prescaler if more than 4 cycles passed since setting CLKPCE",
+          "line": 32,
+          "assertions": 2
+        },
+        {
+          "id": "case_004_should_return_the_current_prescaler_value",
+          "name": "Clock / prescaler property / should return the current prescaler value",
+          "line": 43,
+          "assertions": 1
+        },
+        {
+          "id": "case_005_should_return_current_number_of_microseconds_derived_from_base_freq_prescaler",
+          "name": "Clock / time properties / should return current number of microseconds, derived from base freq + prescaler",
+          "line": 54,
+          "assertions": 1
+        },
+        {
+          "id": "case_006_should_return_current_number_of_milliseconds_derived_from_base_freq_prescaler",
+          "name": "Clock / time properties / should return current number of milliseconds, derived from base freq + prescaler",
+          "line": 63,
+          "assertions": 1
+        },
+        {
+          "id": "case_007_should_return_current_number_of_nanoseconds_derived_from_base_freq_prescaler",
+          "name": "Clock / time properties / should return current number of nanoseconds, derived from base freq + prescaler",
+          "line": 72,
+          "assertions": 1
+        },
+        {
+          "id": "case_008_should_correctly_calculate_time_when_changing_the_prescale_value_at_runtime",
+          "name": "Clock / time properties / should correctly calculate time when changing the prescale value at runtime",
+          "line": 81,
+          "assertions": 2
+        }
+      ]
+    },
+    {
+      "source": "src/peripherals/eeprom.spec.ts",
+      "sha256": "94204dfb2523c9636329160eb82e168bab566755e5423b90cff2548d68c9994c",
+      "module": "peripherals_eeprom",
+      "imports": [
+        "CPU",
+        "asmProgram",
+        "TestProgramRunner",
+        "AVREEPROM",
+        "EEPROMMemoryBackend"
+      ],
+      "cases": [
+        {
+          "id": "case_001_should_return_0xff_when_reading_from_an_empty_location",
+          "name": "EEPROM / Reading the EEPROM / should return 0xff when reading from an empty location",
+          "line": 28,
+          "assertions": 2
+        },
+        {
+          "id": "case_002_should_return_the_value_stored_at_the_given_eeprom_address",
+          "name": "EEPROM / Reading the EEPROM / should return the value stored at the given EEPROM address",
+          "line": 39,
+          "assertions": 1
+        },
+        {
+          "id": "case_003_should_write_a_byte_to_the_given_eeprom_address",
+          "name": "EEPROM / Writing to the EEPROM / should write a byte to the given EEPROM address",
+          "line": 53,
+          "assertions": 3
+        },
+        {
+          "id": "case_004_should_not_erase_the_memory_when_writing_if_eepm1_is_high",
+          "name": "EEPROM / Writing to the EEPROM / should not erase the memory when writing if EEPM1 is high",
+          "line": 68,
+          "assertions": 1
+        },
+        {
+          "id": "case_005_should_clear_the_eepe_bit_and_fire_an_interrupt_when_write_has_been_completed",
+          "name": "EEPROM / Writing to the EEPROM / should clear the EEPE bit and fire an interrupt when write has been completed",
+          "line": 99,
+          "assertions": 5
+        },
+        {
+          "id": "case_006_should_clear_the_fire_an_interrupt_when_there_is_a_pending_interrupt_and_the_interrupt_flag_is_enabl",
+          "name": "EEPROM / Writing to the EEPROM / should clear the fire an interrupt when there is a pending interrupt and the interrupt flag is enabled (issue #110)",
+          "line": 122,
+          "assertions": 5
+        },
+        {
+          "id": "case_007_should_skip_the_write_if_eempe_is_clear",
+          "name": "EEPROM / Writing to the EEPROM / should skip the write if EEMPE is clear",
+          "line": 147,
+          "assertions": 3
+        },
+        {
+          "id": "case_008_should_skip_the_write_if_another_write_is_already_in_progress",
+          "name": "EEPROM / Writing to the EEPROM / should skip the write if another write is already in progress",
+          "line": 165,
+          "assertions": 4
+        },
+        {
+          "id": "case_009_should_write_two_bytes_sucessfully",
+          "name": "EEPROM / Writing to the EEPROM / should write two bytes sucessfully",
+          "line": 193,
+          "assertions": 4
+        },
+        {
+          "id": "case_010_should_only_erase_the_memory_when_eepm0_is_high",
+          "name": "EEPROM / EEPROM erase / should only erase the memory when EEPM0 is high",
+          "line": 227,
+          "assertions": 1
+        }
+      ]
+    },
+    {
+      "source": "src/peripherals/gpio.spec.ts",
+      "sha256": "eafd027829fff7852a1370ec114d00546787fa57251f2df86df35b7e3d65fc95",
+      "module": "peripherals_gpio",
+      "imports": [
+        "CPU",
+        "asmProgram",
+        "TestProgramRunner",
+        "AVRIOPort",
+        "PinOverrideMode",
+        "PinState",
+        "portBConfig",
+        "portDConfig"
+      ],
+      "cases": [
+        {
+          "id": "case_001_should_invoke_the_listeners_when_the_port_is_written_to",
+          "name": "GPIO / should invoke the listeners when the port is written to",
+          "line": 45,
+          "assertions": 2
+        },
+        {
+          "id": "case_002_should_invoke_the_listeners_when_ddr_changes_issue_28",
+          "name": "GPIO / should invoke the listeners when DDR changes (issue #28)",
+          "line": 56,
+          "assertions": 1
+        },
+        {
+          "id": "case_003_should_invoke_the_listeners_when_pullup_register_enabled_issue_62",
+          "name": "GPIO / should invoke the listeners when pullup register enabled (issue #62)",
+          "line": 66,
+          "assertions": 1
+        },
+        {
+          "id": "case_004_should_toggle_the_pin_when_writing_to_the_pin_register",
+          "name": "GPIO / should toggle the pin when writing to the PIN register",
+          "line": 75,
+          "assertions": 2
+        },
+        {
+          "id": "case_005_should_only_affect_one_pin_when_writing_to_pin_using_sbi_issue_103",
+          "name": "GPIO / should only affect one pin when writing to PIN using SBI (issue #103)",
+          "line": 87,
+          "assertions": 4
+        },
+        {
+          "id": "case_006_should_update_the_pin_register_on_output_compare_ocr_match_issue_102",
+          "name": "GPIO / should update the PIN register on output compare (OCR) match (issue #102)",
+          "line": 123,
+          "assertions": 4
+        },
+        {
+          "id": "case_007_should_remove_the_given_listener",
+          "name": "GPIO / removeListener / should remove the given listener",
+          "line": 136,
+          "assertions": 1
+        },
+        {
+          "id": "case_008_should_return_pinstate_high_when_the_pin_set_to_output_and_high",
+          "name": "GPIO / pinState / should return PinState.High when the pin set to output and HIGH",
+          "line": 149,
+          "assertions": 1
+        },
+        {
+          "id": "case_009_should_return_pinstate_low_when_the_pin_set_to_output_and_low",
+          "name": "GPIO / pinState / should return PinState.Low when the pin set to output and LOW",
+          "line": 157,
+          "assertions": 1
+        },
+        {
+          "id": "case_010_should_return_pinstate_input_by_default_reset_state",
+          "name": "GPIO / pinState / should return PinState.Input by default (reset state)",
+          "line": 165,
+          "assertions": 1
+        },
+        {
+          "id": "case_011_should_return_pinstate_inputpullup_when_the_pin_is_set_to_input_with_pullup",
+          "name": "GPIO / pinState / should return PinState.InputPullUp when the pin is set to input with pullup",
+          "line": 171,
+          "assertions": 1
+        },
+        {
+          "id": "case_012_should_reflect_the_current_port_state_when_called_inside_a_listener",
+          "name": "GPIO / pinState / should reflect the current port state when called inside a listener",
+          "line": 179,
+          "assertions": 3
+        },
+        {
+          "id": "case_013_should_reflect_the_current_port_state_when_called_inside_a_listener_after_ddr_change",
+          "name": "GPIO / pinState / should reflect the current port state when called inside a listener after DDR change",
+          "line": 193,
+          "assertions": 3
+        },
+        {
+          "id": "case_014_should_set_the_value_of_the_given_pin",
+          "name": "GPIO / setPin / should set the value of the given pin",
+          "line": 208,
+          "assertions": 2
+        },
+        {
+          "id": "case_015_should_only_update_pin_register_when_pin_in_input_mode",
+          "name": "GPIO / setPin / should only update PIN register when pin in Input mode",
+          "line": 218,
+          "assertions": 2
+        },
+        {
+          "id": "case_016_should_generate_int0_interrupt_on_rising_edge",
+          "name": "GPIO / External interrupt / should generate INT0 interrupt on rising edge",
+          "line": 231,
+          "assertions": 6
+        },
+        {
+          "id": "case_017_should_generate_int0_interrupt_on_falling_edge",
+          "name": "GPIO / External interrupt / should generate INT0 interrupt on falling edge",
+          "line": 251,
+          "assertions": 6
+        },
+        {
+          "id": "case_018_should_generate_int0_interrupt_on_level_change",
+          "name": "GPIO / External interrupt / should generate INT0 interrupt on level change",
+          "line": 270,
+          "assertions": 4
+        },
+        {
+          "id": "case_019_should_a_sticky_int0_interrupt_while_the_pin_level_is_low",
+          "name": "GPIO / External interrupt / should a sticky INT0 interrupt while the pin level is low",
+          "line": 285,
+          "assertions": 8
+        },
+        {
+          "id": "case_020_should_generate_a_pin_change_interrupt_when_pb3_pcint3_goes_high",
+          "name": "GPIO / Pin change interrupts (PCINT) / should generate a pin change interrupt when PB3 (PCINT3) goes high",
+          "line": 317,
+          "assertions": 4
+        },
+        {
+          "id": "case_021_should_generate_a_pin_change_interrupt_when_pb3_pcint3_goes_low",
+          "name": "GPIO / Pin change interrupts (PCINT) / should generate a pin change interrupt when PB3 (PCINT3) goes low",
+          "line": 333,
+          "assertions": 5
+        },
+        {
+          "id": "case_022_should_clear_the_interrupt_flag_when_writing_to_pcifr",
+          "name": "GPIO / Pin change interrupts (PCINT) / should clear the interrupt flag when writing to PCIFR",
+          "line": 352,
+          "assertions": 2
+        }
+      ]
+    },
+    {
+      "source": "src/peripherals/spi.spec.ts",
+      "sha256": "438789b6277ca7d51f56ab4bdcd97cf98291a978a2d17d6fa752b37c59d1d4bd",
+      "module": "peripherals_spi",
+      "imports": [
+        "CPU",
+        "asmProgram",
+        "TestProgramRunner",
+        "AVRSPI",
+        "spiConfig"
+      ],
+      "cases": [
+        {
+          "id": "case_001_should_correctly_calculate_the_frequency_based_on_spcr_spst_values",
+          "name": "SPI / should correctly calculate the frequency based on SPCR/SPST values",
+          "line": 34,
+          "assertions": 8
+        },
+        {
+          "id": "case_002_should_correctly_report_the_data_order_msb_lsb_first_based_on_spcr_value",
+          "name": "SPI / should correctly report the data order (MSB/LSB first), based on SPCR value",
+          "line": 64,
+          "assertions": 2
+        },
+        {
+          "id": "case_003_should_correctly_report_the_spi_mode_based_on_spcr_value",
+          "name": "SPI / should correctly report the SPI mode, based on SPCR value",
+          "line": 75,
+          "assertions": 4
+        },
+        {
+          "id": "case_004_should_indicate_slave_master_operation_based_on_spcr_value",
+          "name": "SPI / should indicate slave/master operation, based on SPCR value",
+          "line": 93,
+          "assertions": 2
+        },
+        {
+          "id": "case_005_should_call_the_onbytetransfer_callback_when_initiating_an_spi_trasfer_by_writing_to_spdr",
+          "name": "SPI / should call the `onByteTransfer` callback when initiating an SPI trasfer by writing to SPDR",
+          "line": 103,
+          "assertions": 1
+        },
+        {
+          "id": "case_006_should_ignore_spdr_writes_when_the_spe_bit_in_spcr_is_clear",
+          "name": "SPI / should ignore SPDR writes when the SPE bit in SPCR is clear",
+          "line": 114,
+          "assertions": 1
+        },
+        {
+          "id": "case_007_should_transmit_a_byte_successfully_integration",
+          "name": "SPI / should transmit a byte successfully (integration)",
+          "line": 125,
+          "assertions": 3
+        },
+        {
+          "id": "case_008_should_set_the_wcol_bit_in_spsr_if_writing_to_spdr_while_spi_is_already_transmitting",
+          "name": "SPI / should set the WCOL bit in SPSR if writing to SPDR while SPI is already transmitting",
+          "line": 177,
+          "assertions": 2
+        },
+        {
+          "id": "case_009_should_clear_the_spif_bit_and_fire_an_interrupt_when_spi_transfer_completes",
+          "name": "SPI / should clear the SPIF bit and fire an interrupt when SPI transfer completes",
+          "line": 190,
+          "assertions": 3
+        },
+        {
+          "id": "case_010_should_fire_a_pending_spi_interrupt_when_spie_flag_is_set",
+          "name": "SPI / should fire a pending SPI interrupt when SPIE flag is set",
+          "line": 210,
+          "assertions": 4
+        },
+        {
+          "id": "case_011_should_should_only_update_spdr_when_tranfer_finishes_double_buffering",
+          "name": "SPI / should should only update SPDR when tranfer finishes (double buffering)",
+          "line": 232,
+          "assertions": 2
+        }
+      ]
+    },
+    {
+      "source": "src/peripherals/timer-attiny.spec.ts",
+      "sha256": "2a0a817f40f8f224fc030530c873ebb63f4b12781d64409a5712b11b5dc19937",
+      "module": "peripherals_timer_attiny",
+      "imports": [
+        "CPU",
+        "AVRIOPort",
+        "ATtinyTimer1",
+        "attinyTimer1Config"
+      ],
+      "cases": [
+        {
+          "id": "case_001_should_update_timer_every_tick_when_prescaler_is_1_cs_1",
+          "name": "ATtiny Timer1 / should update timer every tick when prescaler is 1 (CS=1)",
+          "line": 43,
+          "assertions": 1
+        },
+        {
+          "id": "case_002_should_update_timer_every_128_ticks_when_prescaler_is_128_cs_8",
+          "name": "ATtiny Timer1 / should update timer every 128 ticks when prescaler is 128 (CS=8)",
+          "line": 53,
+          "assertions": 1
+        },
+        {
+          "id": "case_003_should_not_update_timer_when_disabled_cs_0",
+          "name": "ATtiny Timer1 / should not update timer when disabled (CS=0)",
+          "line": 63,
+          "assertions": 1
+        },
+        {
+          "id": "case_004_should_clear_timer_on_ocr1c_match_when_ctc1_is_set",
+          "name": "ATtiny Timer1 / CTC mode / should clear timer on OCR1C match when CTC1 is set",
+          "line": 72,
+          "assertions": 1
+        },
+        {
+          "id": "case_005_should_set_tov1_when_timer_overflows_past_ocr1c",
+          "name": "ATtiny Timer1 / CTC mode / should set TOV1 when timer overflows past OCR1C",
+          "line": 84,
+          "assertions": 2
+        },
+        {
+          "id": "case_006_should_set_ocf1a_when_timer_matches_ocr1a",
+          "name": "ATtiny Timer1 / CTC mode / should set OCF1A when timer matches OCR1A",
+          "line": 97,
+          "assertions": 1
+        },
+        {
+          "id": "case_007_should_set_ocf1b_when_timer_matches_ocr1b",
+          "name": "ATtiny Timer1 / CTC mode / should set OCF1B when timer matches OCR1B",
+          "line": 110,
+          "assertions": 1
+        },
+        {
+          "id": "case_008_should_fire_compa_interrupt_when_enabled",
+          "name": "ATtiny Timer1 / CTC mode / should fire COMPA interrupt when enabled",
+          "line": 123,
+          "assertions": 1
+        },
+        {
+          "id": "case_009_should_overflow_after_a_full_period_with_prescaler_128",
+          "name": "ATtiny Timer1 / CTC mode / should overflow after a full period with prescaler 128",
+          "line": 138,
+          "assertions": 1
+        },
+        {
+          "id": "case_010_should_clear_tov1_by_writing_1_to_tifr",
+          "name": "ATtiny Timer1 / clearing interrupt flags / should clear TOV1 by writing 1 to TIFR",
+          "line": 156,
+          "assertions": 2
+        }
+      ]
+    },
+    {
+      "source": "src/peripherals/timer.spec.ts",
+      "sha256": "baf1c0e8029224bf41690773c8eac102ff2f03c8b2f23573ec9bdeffe4144c36",
+      "module": "peripherals_timer",
+      "imports": [
+        "CPU",
+        "asmProgram",
+        "TestProgramRunner",
+        "AVRIOPort",
+        "PinOverrideMode",
+        "portBConfig",
+        "portDConfig",
+        "AVRTimer",
+        "timer0Config",
+        "timer1Config",
+        "timer2Config"
+      ],
+      "cases": [
+        {
+          "id": "case_001_should_update_timer_every_tick_when_prescaler_is_1",
+          "name": "timer / should update timer every tick when prescaler is 1",
+          "line": 83,
+          "assertions": 1
+        },
+        {
+          "id": "case_002_should_update_timer_every_64_ticks_when_prescaler_is_3",
+          "name": "timer / should update timer every 64 ticks when prescaler is 3",
+          "line": 95,
+          "assertions": 1
+        },
+        {
+          "id": "case_003_should_not_update_timer_if_it_has_been_disabled",
+          "name": "timer / should not update timer if it has been disabled",
+          "line": 107,
+          "assertions": 1
+        },
+        {
+          "id": "case_004_should_set_the_tov_flag_when_timer_wraps_above_top_value",
+          "name": "timer / should set the TOV flag when timer wraps above TOP value",
+          "line": 119,
+          "assertions": 4
+        },
+        {
+          "id": "case_005_should_set_the_tov_if_timer_overflows_past_top_without_reaching_top",
+          "name": "timer / should set the TOV if timer overflows past TOP without reaching TOP",
+          "line": 136,
+          "assertions": 3
+        },
+        {
+          "id": "case_006_should_clear_the_tov_flag_when_writing_1_to_the_tov_bit_and_not_trigger_the_interrupt",
+          "name": "timer / should clear the TOV flag when writing 1 to the TOV bit, and not trigger the interrupt",
+          "line": 150,
+          "assertions": 2
+        },
+        {
+          "id": "case_007_should_set_tov_if_timer_overflows_in_fast_pwm_mode",
+          "name": "timer / should set TOV if timer overflows in FAST PWM mode",
+          "line": 164,
+          "assertions": 2
+        },
+        {
+          "id": "case_008_should_generate_an_overflow_interrupt_if_timer_overflows_and_interrupts_enabled",
+          "name": "timer / should generate an overflow interrupt if timer overflows and interrupts enabled",
+          "line": 180,
+          "assertions": 4
+        },
+        {
+          "id": "case_009_should_support_overriding_tifr_tov_and_timsk_toie_bits_issue_64",
+          "name": "timer / should support overriding TIFR/TOV and TIMSK/TOIE bits (issue #64)",
+          "line": 198,
+          "assertions": 4
+        },
+        {
+          "id": "case_010_should_not_generate_an_overflow_interrupt_when_global_interrupts_disabled",
+          "name": "timer / should not generate an overflow interrupt when global interrupts disabled",
+          "line": 226,
+          "assertions": 3
+        },
+        {
+          "id": "case_011_should_not_generate_an_overflow_interrupt_when_toie0_is_clear",
+          "name": "timer / should not generate an overflow interrupt when TOIE0 is clear",
+          "line": 242,
+          "assertions": 3
+        },
+        {
+          "id": "case_012_should_set_ocf0a_b_flags_when_ocra_b_0_and_the_timer_equals_to_ocra_issue_74",
+          "name": "timer / should set OCF0A/B flags when OCRA/B == 0 and the timer equals to OCRA (issue #74)",
+          "line": 258,
+          "assertions": 4
+        },
+        {
+          "id": "case_013_should_set_the_ocf1a_flag_when_ocr1a_120_and_the_timer_overflowed_past_120_in_wgm_mode_15_issue_94",
+          "name": "timer / should set the OCF1A flag when OCR1A == 120 and the timer overflowed past 120 in WGM mode 15 (issue #94)",
+          "line": 276,
+          "assertions": 4
+        },
+        {
+          "id": "case_014_should_set_ocf0a_flag_when_timer_equals_ocra",
+          "name": "timer / should set OCF0A flag when timer equals OCRA",
+          "line": 294,
+          "assertions": 3
+        },
+        {
+          "id": "case_015_should_reset_the_counter_in_ctc_mode_if_it_equals_to_ocra",
+          "name": "timer / should reset the counter in CTC mode if it equals to OCRA",
+          "line": 310,
+          "assertions": 3
+        },
+        {
+          "id": "case_016_should_not_set_the_tov_bit_when_top_max_in_ctc_mode_issue_75",
+          "name": "timer / should not set the TOV bit when TOP < MAX in CTC mode (issue #75)",
+          "line": 327,
+          "assertions": 2
+        },
+        {
+          "id": "case_017_should_set_the_tov_bit_when_top_max_in_ctc_mode_issue_75",
+          "name": "timer / should set the TOV bit when TOP == MAX in CTC mode (issue #75)",
+          "line": 345,
+          "assertions": 4
+        },
+        {
+          "id": "case_018_should_not_set_the_tov_bit_twice_on_overflow_issue_80",
+          "name": "timer / should not set the TOV bit twice on overflow (issue #80)",
+          "line": 366,
+          "assertions": 4
+        },
+        {
+          "id": "case_019_should_set_ocf0b_flag_when_timer_equals_ocrb",
+          "name": "timer / should set OCF0B flag when timer equals OCRB",
+          "line": 388,
+          "assertions": 3
+        },
+        {
+          "id": "case_020_should_generate_timer_compare_a_interrupt_when_tcnt0_tcnta",
+          "name": "timer / should generate Timer Compare A interrupt when TCNT0 == TCNTA",
+          "line": 404,
+          "assertions": 4
+        },
+        {
+          "id": "case_021_should_not_generate_timer_compare_a_interrupt_when_ociea_is_disabled",
+          "name": "timer / should not generate Timer Compare A interrupt when OCIEA is disabled",
+          "line": 423,
+          "assertions": 3
+        },
+        {
+          "id": "case_022_should_generate_timer_compare_b_interrupt_when_tcnt0_tcntb",
+          "name": "timer / should generate Timer Compare B interrupt when TCNT0 == TCNTB",
+          "line": 441,
+          "assertions": 4
+        },
+        {
+          "id": "case_023_should_not_increment_tcnt_on_the_same_cycle_of_tcnt_write_issue_36",
+          "name": "timer / should not increment TCNT on the same cycle of TCNT write (issue #36)",
+          "line": 460,
+          "assertions": 1
+        },
+        {
+          "id": "case_024_timer2_should_count_every_256_ticks_when_prescaler_is_6_issue_5",
+          "name": "timer / timer2 should count every 256 ticks when prescaler is 6 (issue #5)",
+          "line": 478,
+          "assertions": 2
+        },
+        {
+          "id": "case_025_should_update_tcnt_as_it_is_being_read_by_a_2_cycle_instruction_issue_40",
+          "name": "timer / should update TCNT as it is being read by a 2-cycle instruction (issue #40)",
+          "line": 494,
+          "assertions": 1
+        },
+        {
+          "id": "case_026_should_not_start_counting_before_the_prescaler_is_first_set_issue_41",
+          "name": "timer / should not start counting before the prescaler is first set (issue #41)",
+          "line": 510,
+          "assertions": 1
+        },
+        {
+          "id": "case_027_should_not_keep_counting_for_one_more_instruction_when_the_timer_is_disabled_issue_72",
+          "name": "timer / should not keep counting for one more instruction when the timer is disabled (issue #72)",
+          "line": 528,
+          "assertions": 1
+        },
+        {
+          "id": "case_028_should_clear_oc0b_pin_when_writing_1_to_foc0b",
+          "name": "timer / should clear OC0B pin when writing 1 to FOC0B",
+          "line": 544,
+          "assertions": 1
+        },
+        {
+          "id": "case_029_should_set_oc0a_on_compare_match_clear_on_bottom_issue_78",
+          "name": "timer / Fast PWM mode / should set OC0A on Compare Match, clear on Bottom (issue #78)",
+          "line": 559,
+          "assertions": 11
+        },
+        {
+          "id": "case_030_should_toggle_oc0a_on_compare_match_when_com0an_1_issue_78",
+          "name": "timer / Fast PWM mode / should toggle OC0A on Compare Match when COM0An = 1 (issue #78)",
+          "line": 614,
+          "assertions": 8
+        },
+        {
+          "id": "case_031_should_leave_oc0a_disconnected_when_com0an_1_and_wgm02_0_issue_78",
+          "name": "timer / Fast PWM mode / should leave OC0A disconnected when COM0An = 1 and WGM02 = 0 (issue #78)",
+          "line": 661,
+          "assertions": 4
+        },
+        {
+          "id": "case_032_should_count_up_to_top_down_to_0_and_then_set_tov_flag",
+          "name": "timer / Phase-correct PWM mode / should count up to TOP, down to 0, and then set TOV flag",
+          "line": 705,
+          "assertions": 7
+        },
+        {
+          "id": "case_033_should_clear_oc0a_when_tcnt0_ocr0a_and_counting_up",
+          "name": "timer / Phase-correct PWM mode / should clear OC0A when TCNT0=OCR0A and counting up",
+          "line": 738,
+          "assertions": 8
+        },
+        {
+          "id": "case_034_should_toggle_oc0a_when_tcnt0_ocr0a_and_com0an_1_issue_78",
+          "name": "timer / Phase-correct PWM mode / should toggle OC0A when TCNT0=OCR0A and COM0An=1 (issue #78)",
+          "line": 784,
+          "assertions": 4
+        },
+        {
+          "id": "case_035_should_leave_oc0a_disconnected_tcnt0_ocr0a_and_com0an_1_in_wgm_mode_1_issue_78",
+          "name": "timer / Phase-correct PWM mode / should leave OC0A disconnected TCNT0=OCR0A and COM0An=1 in WGM mode 1 (issue #78)",
+          "line": 822,
+          "assertions": 1
+        },
+        {
+          "id": "case_036_should_not_miss_compare_match_when_executing_multi_cycle_instruction_issue_79",
+          "name": "timer / Phase-correct PWM mode / should not miss Compare Match when executing multi-cycle instruction (issue #79)",
+          "line": 849,
+          "assertions": 3
+        },
+        {
+          "id": "case_037_should_only_update_ocr0a_when_tcnt0_top_in_pwm_phase_correct_mode_issue_76",
+          "name": "timer / Phase-correct PWM mode / should only update OCR0A when TCNT0=TOP in PWM Phase Correct mode (issue #76)",
+          "line": 880,
+          "assertions": 2
+        },
+        {
+          "id": "case_038_should_update_ocr0a_when_tcnt0_top_and_top_0_in_pwm_phase_correct_mode_issue_119",
+          "name": "timer / Phase-correct PWM mode / should update OCR0A when TCNT0=TOP and TOP=0 in PWM Phase Correct mode (issue #119)",
+          "line": 916,
+          "assertions": 3
+        },
+        {
+          "id": "case_039_should_not_overrun_when_top_current_value_in_phase_correct_mode_issue_119",
+          "name": "timer / Phase-correct PWM mode / should not overrun when TOP < current value in Phase Correct mode (issue #119)",
+          "line": 945,
+          "assertions": 2
+        },
+        {
+          "id": "case_040_should_increment_16_bit_tcnt_by_1",
+          "name": "timer / 16 bit timers / should increment 16-bit TCNT by 1",
+          "line": 970,
+          "assertions": 2
+        },
+        {
+          "id": "case_041_should_set_ocf1a_flag_when_timer_equals_ocra_16_bit_mode",
+          "name": "timer / 16 bit timers / should set OCF1A flag when timer equals OCRA (16 bit mode)",
+          "line": 988,
+          "assertions": 3
+        },
+        {
+          "id": "case_042_should_set_ocf1c_flag_when_timer_equals_ocrc",
+          "name": "timer / 16 bit timers / should set OCF1C flag when timer equals OCRC",
+          "line": 1006,
+          "assertions": 3
+        },
+        {
+          "id": "case_043_should_generate_an_overflow_interrupt_if_timer_overflows_and_interrupts_enabled",
+          "name": "timer / 16 bit timers / should generate an overflow interrupt if timer overflows and interrupts enabled",
+          "line": 1031,
+          "assertions": 4
+        },
+        {
+          "id": "case_044_should_reset_the_timer_once_it_reaches_icr_value_in_mode_12",
+          "name": "timer / 16 bit timers / should reset the timer once it reaches ICR value in mode 12",
+          "line": 1053,
+          "assertions": 3
+        },
+        {
+          "id": "case_045_should_not_update_the_high_byte_of_tcnt_if_written_after_the_low_byte_issue_37",
+          "name": "timer / 16 bit timers / should not update the high byte of TCNT if written after the low byte (issue #37)",
+          "line": 1071,
+          "assertions": 1
+        },
+        {
+          "id": "case_046_reading_from_tcnt1h_before_tcnt1l_should_return_old_value_issue_37",
+          "name": "timer / 16 bit timers / reading from TCNT1H before TCNT1L should return old value (issue #37)",
+          "line": 1083,
+          "assertions": 1
+        },
+        {
+          "id": "case_047_should_toggle_oc1b_on_compare_match",
+          "name": "timer / 16 bit timers / should toggle OC1B on Compare Match",
+          "line": 1100,
+          "assertions": 4
+        },
+        {
+          "id": "case_048_should_toggle_oc1c_on_compare_match",
+          "name": "timer / 16 bit timers / should toggle OC1C on Compare Match",
+          "line": 1140,
+          "assertions": 4
+        },
+        {
+          "id": "case_049_should_toggle_oc1c_on_when_writing_1_to_foc1c",
+          "name": "timer / 16 bit timers / should toggle OC1C on when writing 1 to FOC1C",
+          "line": 1186,
+          "assertions": 1
+        },
+        {
+          "id": "case_050_should_not_toggle_oc1c_on_when_writing_1_to_foc1c_in_pwm_mode",
+          "name": "timer / 16 bit timers / should not toggle OC1C on when writing 1 to FOC1C in PWM mode",
+          "line": 1206,
+          "assertions": 1
+        },
+        {
+          "id": "case_051_should_only_update_ocr1a_when_tcnt1_bottom_in_pwm_phase_frequency_correct_mode_issue_76",
+          "name": "timer / 16 bit timers / should only update OCR1A when TCNT1=BOTTOM in PWM Phase/Frequency Correct mode (issue #76)",
+          "line": 1226,
+          "assertions": 4
+        },
+        {
+          "id": "case_052_should_update_ocr1a_when_setting_tcnt_to_0_issue_111",
+          "name": "timer / 16 bit timers / should update OCR1A when setting TCNT to 0 (issue #111)",
+          "line": 1269,
+          "assertions": 4
+        },
+        {
+          "id": "case_053_should_mask_the_unused_bits_of_ocr1a_when_using_fixed_top_values",
+          "name": "timer / 16 bit timers / should mask the unused bits of OCR1A when using fixed top values",
+          "line": 1305,
+          "assertions": 2
+        },
+        {
+          "id": "case_054_should_count_on_the_falling_edge_of_t0_when_cs_110",
+          "name": "timer / External clock / should count on the falling edge of T0 when CS=110",
+          "line": 1318,
+          "assertions": 2
+        },
+        {
+          "id": "case_055_should_count_on_the_rising_edge_of_t0_when_cs_111",
+          "name": "timer / External clock / should count on the rising edge of T0 when CS=111",
+          "line": 1337,
+          "assertions": 2
+        }
+      ]
+    },
+    {
+      "source": "src/peripherals/twi.spec.ts",
+      "sha256": "dc953d970e0d2d7f59d2d110e38c3b24583b30177f2b35c243284a0126f642ab",
+      "module": "peripherals_twi",
+      "imports": [
+        "CPU",
+        "asmProgram",
+        "TestProgramRunner",
+        "AVRTWI",
+        "twiConfig"
+      ],
+      "cases": [
+        {
+          "id": "case_001_should_correctly_calculate_the_sclfrequency_from_twbr",
+          "name": "TWI / should correctly calculate the sclFrequency from TWBR",
+          "line": 36,
+          "assertions": 1
+        },
+        {
+          "id": "case_002_should_take_the_prescaler_into_consideration_when_calculating_sclfrequency",
+          "name": "TWI / should take the prescaler into consideration when calculating sclFrequency",
+          "line": 44,
+          "assertions": 1
+        },
+        {
+          "id": "case_003_should_trigger_data_an_interrupt_if_twint_is_set",
+          "name": "TWI / should trigger data an interrupt if TWINT is set",
+          "line": 52,
+          "assertions": 3
+        },
+        {
+          "id": "case_004_should_call_the_startevent_handler_when_twsta_bit_is_written_1",
+          "name": "TWI / Master mode / should call the startEvent handler when TWSTA bit is written 1",
+          "line": 65,
+          "assertions": 1
+        },
+        {
+          "id": "case_005_should_connect_successfully_in_case_of_repeated_start_issue_91",
+          "name": "TWI / Master mode / should connect successfully in case of repeated start (issue #91)",
+          "line": 75,
+          "assertions": 2
+        },
+        {
+          "id": "case_006_should_successfully_transmit_a_byte_to_a_slave",
+          "name": "TWI / Master mode / should successfully transmit a byte to a slave",
+          "line": 100,
+          "assertions": 5
+        },
+        {
+          "id": "case_007_should_successfully_receive_a_byte_from_a_slave",
+          "name": "TWI / Master mode / should successfully receive a byte from a slave",
+          "line": 246,
+          "assertions": 6
+        }
+      ]
+    },
+    {
+      "source": "src/peripherals/usart.spec.ts",
+      "sha256": "5f9f4d1f4319fec214f02f559a45be8fab1058f739aa4ebe5f58c7f31d2b72a1",
+      "module": "peripherals_usart",
+      "imports": [
+        "CPU",
+        "AVRUSART",
+        "usart0Config"
+      ],
+      "cases": [
+        {
+          "id": "case_001_should_correctly_calculate_the_baudrate_from_ubrr",
+          "name": "USART / should correctly calculate the baudRate from UBRR",
+          "line": 43,
+          "assertions": 1
+        },
+        {
+          "id": "case_002_should_correctly_calculate_the_baudrate_from_ubrr_in_double_speed_mode",
+          "name": "USART / should correctly calculate the baudRate from UBRR in double-speed mode",
+          "line": 51,
+          "assertions": 1
+        },
+        {
+          "id": "case_003_should_call_onconfigurationchange_when_the_baudrate_changes",
+          "name": "USART / should call onConfigurationChange when the baudRate changes",
+          "line": 60,
+          "assertions": 3
+        },
+        {
+          "id": "case_004_should_return_5_bits_per_byte_when_ucsz_0",
+          "name": "USART / bitsPerChar / should return 5-bits per byte when UCSZ = 0",
+          "line": 79,
+          "assertions": 1
+        },
+        {
+          "id": "case_005_should_return_6_bits_per_byte_when_ucsz_1",
+          "name": "USART / bitsPerChar / should return 6-bits per byte when UCSZ = 1",
+          "line": 86,
+          "assertions": 1
+        },
+        {
+          "id": "case_006_should_return_7_bits_per_byte_when_ucsz_2",
+          "name": "USART / bitsPerChar / should return 7-bits per byte when UCSZ = 2",
+          "line": 93,
+          "assertions": 1
+        },
+        {
+          "id": "case_007_should_return_8_bits_per_byte_when_ucsz_3",
+          "name": "USART / bitsPerChar / should return 8-bits per byte when UCSZ = 3",
+          "line": 100,
+          "assertions": 1
+        },
+        {
+          "id": "case_008_should_return_9_bits_per_byte_when_ucsz_7",
+          "name": "USART / bitsPerChar / should return 9-bits per byte when UCSZ = 7",
+          "line": 107,
+          "assertions": 1
+        },
+        {
+          "id": "case_009_should_call_onconfigurationchange_when_bitsperchar_change",
+          "name": "USART / bitsPerChar / should call onConfigurationChange when bitsPerChar change",
+          "line": 115,
+          "assertions": 3
+        },
+        {
+          "id": "case_010_should_return_1_when_usbs_0",
+          "name": "USART / stopBits / should return 1 when USBS = 0",
+          "line": 135,
+          "assertions": 1
+        },
+        {
+          "id": "case_011_should_return_2_when_usbs_1",
+          "name": "USART / stopBits / should return 2 when USBS = 1",
+          "line": 141,
+          "assertions": 1
+        },
+        {
+          "id": "case_012_should_return_false_when_upm1_0",
+          "name": "USART / parityEnabled / should return false when UPM1 = 0",
+          "line": 150,
+          "assertions": 1
+        },
+        {
+          "id": "case_013_should_return_true_when_upm1_1",
+          "name": "USART / parityEnabled / should return true when UPM1 = 1",
+          "line": 156,
+          "assertions": 1
+        },
+        {
+          "id": "case_014_should_return_false_when_upm0_0",
+          "name": "USART / parityOdd / should return false when UPM0 = 0",
+          "line": 165,
+          "assertions": 1
+        },
+        {
+          "id": "case_015_should_return_true_when_upm0_1",
+          "name": "USART / parityOdd / should return true when UPM0 = 1",
+          "line": 171,
+          "assertions": 1
+        },
+        {
+          "id": "case_016_should_invoke_onbytetransmit_when_udr0_is_written_to",
+          "name": "USART / should invoke onByteTransmit when UDR0 is written to",
+          "line": 179,
+          "assertions": 1
+        },
+        {
+          "id": "case_017_txenable_should_equal_true_when_the_transitter_is_enabled",
+          "name": "USART / txEnable/rxEnable / txEnable should equal true when the transitter is enabled",
+          "line": 189,
+          "assertions": 2
+        },
+        {
+          "id": "case_018_rxenable_should_equal_true_when_the_transitter_is_enabled",
+          "name": "USART / txEnable/rxEnable / rxEnable should equal true when the transitter is enabled",
+          "line": 198,
+          "assertions": 2
+        },
+        {
+          "id": "case_019_should_trigger_data_register_empty_interrupt_if_udre_is_set",
+          "name": "USART / tick() / should trigger data register empty interrupt if UDRE is set",
+          "line": 209,
+          "assertions": 3
+        },
+        {
+          "id": "case_020_should_trigger_data_tx_complete_interrupt_if_txcie_is_set",
+          "name": "USART / tick() / should trigger data TX Complete interrupt if TXCIE is set",
+          "line": 220,
+          "assertions": 3
+        },
+        {
+          "id": "case_021_should_not_trigger_data_tx_complete_interrupt_if_udr_was_not_written_to",
+          "name": "USART / tick() / should not trigger data TX Complete interrupt if UDR was not written to",
+          "line": 233,
+          "assertions": 2
+        },
+        {
+          "id": "case_022_should_not_trigger_any_interrupt_if_interrupts_are_disabled",
+          "name": "USART / tick() / should not trigger any interrupt if interrupts are disabled",
+          "line": 243,
+          "assertions": 3
+        },
+        {
+          "id": "case_023_should_call_onlinetransmit_with_the_current_line_buffer_after_every_newline",
+          "name": "USART / onLineTransmit / should call onLineTransmit with the current line buffer after every newline",
+          "line": 258,
+          "assertions": 1
+        },
+        {
+          "id": "case_024_should_not_call_onlinetransmit_if_no_newline_was_received",
+          "name": "USART / onLineTransmit / should not call onLineTransmit if no newline was received",
+          "line": 272,
+          "assertions": 1
+        },
+        {
+          "id": "case_025_should_clear_the_line_buffer_after_each_call_to_onlinetransmit",
+          "name": "USART / onLineTransmit / should clear the line buffer after each call to onLineTransmit",
+          "line": 282,
+          "assertions": 1
+        },
+        {
+          "id": "case_026_should_return_false_if_called_when_rx_is_busy",
+          "name": "USART / writeByte / should return false if called when RX is busy",
+          "line": 301,
+          "assertions": 3
+        },
+        {
+          "id": "case_027_should_set_the_txc_bit_after_1_04ms_when_baud_rate_set_to_9600",
+          "name": "USART / Integration tests / should set the TXC bit after ~1.04mS when baud rate set to 9600",
+          "line": 314,
+          "assertions": 2
+        },
+        {
+          "id": "case_028_should_be_ready_to_recieve_the_next_byte_after_1_04ms_when_baudrate_set_to_9600",
+          "name": "USART / Integration tests / should be ready to recieve the next byte after ~1.04ms when baudrate set to 9600",
+          "line": 328,
+          "assertions": 9
+        }
+      ]
+    },
+    {
+      "source": "src/peripherals/watchdog.spec.ts",
+      "sha256": "d08246d1e86585488f10a73231877aa8fe437294f7d6651b3e68dfb38d568197",
+      "module": "peripherals_watchdog",
+      "imports": [
+        "AVRClock",
+        "clockConfig",
+        "CPU",
+        "asmProgram",
+        "TestProgramRunner",
+        "AVRWatchdog",
+        "watchdogConfig"
+      ],
+      "cases": [
+        {
+          "id": "case_001_should_correctly_calculate_the_prescaler_from_wdtcsr",
+          "name": "Watchdog / should correctly calculate the prescaler from WDTCSR",
+          "line": 34,
+          "assertions": 3
+        },
+        {
+          "id": "case_002_should_not_change_the_prescaler_unless_wdce_is_set",
+          "name": "Watchdog / should not change the prescaler unless WDCE is set",
+          "line": 47,
+          "assertions": 3
+        },
+        {
+          "id": "case_003_should_reset_the_cpu_when_the_timer_expires",
+          "name": "Watchdog / should reset the CPU when the timer expires",
+          "line": 62,
+          "assertions": 3
+        },
+        {
+          "id": "case_004_should_extend_the_watchdog_timeout_when_executing_a_wdr_instruction",
+          "name": "Watchdog / should extend the watchdog timeout when executing a WDR instruction",
+          "line": 97,
+          "assertions": 4
+        },
+        {
+          "id": "case_005_should_fire_an_interrupt_when_the_watchdog_expires_and_wdie_is_set",
+          "name": "Watchdog / should fire an interrupt when the watchdog expires and WDIE is set",
+          "line": 138,
+          "assertions": 3
+        },
+        {
+          "id": "case_006_should_not_reset_the_cpu_if_the_watchdog_has_been_disabled",
+          "name": "Watchdog / should not reset the CPU if the watchdog has been disabled",
+          "line": 176,
+          "assertions": 3
+        }
+      ]
+    },
+    {
+      "source": "src/utils/assembler.spec.ts",
+      "sha256": "648d23f88054258acb85e4e7038f6c5edb84b30f83cfc5760bdd07b7d8881d1c",
+      "module": "utils_assembler",
+      "imports": [
+        "assemble"
+      ],
+      "cases": [
+        {
+          "id": "case_001_should_assemble_add_instruction",
+          "name": "AVR assembler / should assemble ADD instruction",
+          "line": 16,
+          "assertions": 1
+        },
+        {
+          "id": "case_002_should_support_labels",
+          "name": "AVR assembler / should support labels",
+          "line": 25,
+          "assertions": 1
+        },
+        {
+          "id": "case_003_should_support_mutli_line_programs",
+          "name": "AVR assembler / should support mutli-line programs",
+          "line": 29,
+          "assertions": 1
+        },
+        {
+          "id": "case_004_should_successfully_assemble_an_empty_program",
+          "name": "AVR assembler / should successfully assemble an empty program",
+          "line": 39,
+          "assertions": 1
+        },
+        {
+          "id": "case_005_should_return_an_empty_byte_array_in_case_of_program_error",
+          "name": "AVR assembler / should return an empty byte array in case of program error",
+          "line": 48,
+          "assertions": 1
+        },
+        {
+          "id": "case_006_should_correctly_assemble_adc_r0_r1",
+          "name": "AVR assembler / should correctly assemble `ADC r0, r1`",
+          "line": 57,
+          "assertions": 1
+        },
+        {
+          "id": "case_007_should_correctly_assemble_bclr_2",
+          "name": "AVR assembler / should correctly assemble `BCLR 2`",
+          "line": 61,
+          "assertions": 1
+        },
+        {
+          "id": "case_008_should_correctly_assemble_bld_r4_7",
+          "name": "AVR assembler / should correctly assemble `BLD r4, 7`",
+          "line": 65,
+          "assertions": 1
+        },
+        {
+          "id": "case_009_should_correctly_assemble_brbc_0_8",
+          "name": "AVR assembler / should correctly assemble `BRBC 0, +8`",
+          "line": 69,
+          "assertions": 1
+        },
+        {
+          "id": "case_010_should_correctly_assemble_brbs_3_92",
+          "name": "AVR assembler / should correctly assemble `BRBS 3, 92`",
+          "line": 73,
+          "assertions": 1
+        },
+        {
+          "id": "case_011_should_correctly_assemble_brbs_3_4",
+          "name": "AVR assembler / should correctly assemble `BRBS 3, -4`",
+          "line": 77,
+          "assertions": 1
+        },
+        {
+          "id": "case_012_should_correctly_assemble_breq_with_forward_label_target",
+          "name": "AVR assembler / should correctly assemble BREQ with forward label target",
+          "line": 81,
+          "assertions": 1
+        },
+        {
+          "id": "case_013_should_correctly_assemble_brne_with_forward_label_target",
+          "name": "AVR assembler / should correctly assemble BRNE with forward label target",
+          "line": 85,
+          "assertions": 1
+        },
+        {
+          "id": "case_014_should_correctly_assemble_cbi_0xc_5",
+          "name": "AVR assembler / should correctly assemble `CBI 0xc, 5`",
+          "line": 89,
+          "assertions": 1
+        },
+        {
+          "id": "case_015_should_correctly_assemble_call_0xb8",
+          "name": "AVR assembler / should correctly assemble `CALL 0xb8`",
+          "line": 93,
+          "assertions": 1
+        },
+        {
+          "id": "case_016_should_correctly_assemble_cpc_r27_r18",
+          "name": "AVR assembler / should correctly assemble `CPC r27, r18`",
+          "line": 97,
+          "assertions": 1
+        },
+        {
+          "id": "case_017_should_correctly_assemble_cpc_r24_r1",
+          "name": "AVR assembler / should correctly assemble `CPC r24, r1`",
+          "line": 101,
+          "assertions": 1
+        },
+        {
+          "id": "case_018_should_correctly_assemble_cpi_r26_0x9",
+          "name": "AVR assembler / should correctly assemble `CPI r26, 0x9`",
+          "line": 105,
+          "assertions": 1
+        },
+        {
+          "id": "case_019_should_correctly_assemble_cpse_r2_r3",
+          "name": "AVR assembler / should correctly assemble `CPSE r2, r3`",
+          "line": 109,
+          "assertions": 1
+        },
+        {
+          "id": "case_020_should_correctly_assemble_icall",
+          "name": "AVR assembler / should correctly assemble `ICALL`",
+          "line": 113,
+          "assertions": 1
+        },
+        {
+          "id": "case_021_should_correctly_assemble_ijmp",
+          "name": "AVR assembler / should correctly assemble `IJMP`",
+          "line": 117,
+          "assertions": 1
+        },
+        {
+          "id": "case_022_should_correctly_assemble_in_r5_0xb",
+          "name": "AVR assembler / should correctly assemble `IN r5, 0xb`",
+          "line": 121,
+          "assertions": 1
+        },
+        {
+          "id": "case_023_should_correctly_assemble_inc_r5",
+          "name": "AVR assembler / should correctly assemble `INC r5`",
+          "line": 125,
+          "assertions": 1
+        },
+        {
+          "id": "case_024_should_correctly_assemble_jmp_0xb8",
+          "name": "AVR assembler / should correctly assemble `JMP 0xb8`",
+          "line": 129,
+          "assertions": 1
+        },
+        {
+          "id": "case_025_should_correctly_assemble_lac_r19",
+          "name": "AVR assembler / should correctly assemble `LAC r19`",
+          "line": 133,
+          "assertions": 1
+        },
+        {
+          "id": "case_026_should_correctly_assemble_las_z_r17",
+          "name": "AVR assembler / should correctly assemble `LAS Z, r17`",
+          "line": 137,
+          "assertions": 1
+        },
+        {
+          "id": "case_027_should_correctly_assemble_lat_z_r0",
+          "name": "AVR assembler / should correctly assemble `LAT Z, r0`",
+          "line": 141,
+          "assertions": 1
+        },
+        {
+          "id": "case_028_should_correctly_assemble_ldi_r28_0xff",
+          "name": "AVR assembler / should correctly assemble `LDI r28, 0xff`",
+          "line": 145,
+          "assertions": 1
+        },
+        {
+          "id": "case_029_should_correctly_assemble_lds_r5_0x150",
+          "name": "AVR assembler / should correctly assemble `LDS r5, 0x150`",
+          "line": 149,
+          "assertions": 1
+        },
+        {
+          "id": "case_030_should_correctly_assemble_ld_r1_x",
+          "name": "AVR assembler / should correctly assemble `LD r1, X`",
+          "line": 153,
+          "assertions": 1
+        },
+        {
+          "id": "case_031_should_correctly_assemble_ld_r17_x",
+          "name": "AVR assembler / should correctly assemble `LD r17, X+`",
+          "line": 157,
+          "assertions": 1
+        },
+        {
+          "id": "case_032_should_correctly_assemble_ld_r1_x",
+          "name": "AVR assembler / should correctly assemble `LD r1, -X`",
+          "line": 161,
+          "assertions": 1
+        },
+        {
+          "id": "case_033_should_correctly_assemble_ld_r8_y",
+          "name": "AVR assembler / should correctly assemble `LD r8, Y`",
+          "line": 165,
+          "assertions": 1
+        },
+        {
+          "id": "case_034_should_correctly_assemble_ld_r3_y",
+          "name": "AVR assembler / should correctly assemble `LD r3, Y+`",
+          "line": 169,
+          "assertions": 1
+        },
+        {
+          "id": "case_035_should_correctly_assemble_ld_r0_y",
+          "name": "AVR assembler / should correctly assemble `LD r0, -Y`",
+          "line": 173,
+          "assertions": 1
+        },
+        {
+          "id": "case_036_should_correctly_assemble_ldd_r4_y_2",
+          "name": "AVR assembler / should correctly assemble `LDD r4, Y+2`",
+          "line": 177,
+          "assertions": 1
+        },
+        {
+          "id": "case_037_should_correctly_assemble_ld_r5_z",
+          "name": "AVR assembler / should correctly assemble `LD r5, Z`",
+          "line": 181,
+          "assertions": 1
+        },
+        {
+          "id": "case_038_should_correctly_assemble_ld_r7_z",
+          "name": "AVR assembler / should correctly assemble `LD r7, Z+`",
+          "line": 185,
+          "assertions": 1
+        },
+        {
+          "id": "case_039_should_correctly_assemble_ld_r0_z",
+          "name": "AVR assembler / should correctly assemble `LD r0, -Z`",
+          "line": 189,
+          "assertions": 1
+        },
+        {
+          "id": "case_040_should_correctly_assemble_ldd_r15_z_31",
+          "name": "AVR assembler / should correctly assemble `LDD r15, Z+31`",
+          "line": 193,
+          "assertions": 1
+        },
+        {
+          "id": "case_041_should_correctly_assemble_lpm",
+          "name": "AVR assembler / should correctly assemble `LPM`",
+          "line": 197,
+          "assertions": 1
+        },
+        {
+          "id": "case_042_should_correctly_assemble_lpm_r2_z",
+          "name": "AVR assembler / should correctly assemble `LPM r2, Z`",
+          "line": 201,
+          "assertions": 1
+        },
+        {
+          "id": "case_043_should_correctly_assemble_lpm_r1_z",
+          "name": "AVR assembler / should correctly assemble `LPM r1, Z+`",
+          "line": 205,
+          "assertions": 1
+        },
+        {
+          "id": "case_044_should_correctly_assemble_lsr_r7",
+          "name": "AVR assembler / should correctly assemble `LSR r7`",
+          "line": 209,
+          "assertions": 1
+        },
+        {
+          "id": "case_045_should_correctly_assemble_mov_r7_r8",
+          "name": "AVR assembler / should correctly assemble `MOV r7, r8`",
+          "line": 213,
+          "assertions": 1
+        },
+        {
+          "id": "case_046_should_correctly_assemble_movw_r26_r22",
+          "name": "AVR assembler / should correctly assemble `MOVW r26, r22`",
+          "line": 217,
+          "assertions": 1
+        },
+        {
+          "id": "case_047_should_correctly_assemble_mul_r5_r6",
+          "name": "AVR assembler / should correctly assemble `MUL r5, r6`",
+          "line": 221,
+          "assertions": 1
+        },
+        {
+          "id": "case_048_should_correctly_assemble_muls_r18_r19",
+          "name": "AVR assembler / should correctly assemble `MULS r18, r19`",
+          "line": 225,
+          "assertions": 1
+        },
+        {
+          "id": "case_049_should_correctly_assemble_mulsu_r16_r17",
+          "name": "AVR assembler / should correctly assemble `MULSU r16, r17`",
+          "line": 229,
+          "assertions": 1
+        },
+        {
+          "id": "case_050_should_correctly_assemble_neg_r20",
+          "name": "AVR assembler / should correctly assemble `NEG r20`",
+          "line": 233,
+          "assertions": 1
+        },
+        {
+          "id": "case_051_should_correctly_assemble_nop",
+          "name": "AVR assembler / should correctly assemble `NOP`",
+          "line": 237,
+          "assertions": 1
+        },
+        {
+          "id": "case_052_should_correctly_assemble_or_r5_r2",
+          "name": "AVR assembler / should correctly assemble `OR r5, r2`",
+          "line": 241,
+          "assertions": 1
+        },
+        {
+          "id": "case_053_should_correctly_assemble_ori_r22_0x81",
+          "name": "AVR assembler / should correctly assemble `ORI r22, 0x81`",
+          "line": 245,
+          "assertions": 1
+        },
+        {
+          "id": "case_054_should_correctly_assemble_out_0x3f_r1",
+          "name": "AVR assembler / should correctly assemble `OUT 0x3f, r1`",
+          "line": 249,
+          "assertions": 1
+        },
+        {
+          "id": "case_055_should_correctly_assemble_pop_r26",
+          "name": "AVR assembler / should correctly assemble `POP r26`",
+          "line": 253,
+          "assertions": 1
+        },
+        {
+          "id": "case_056_should_correctly_assemble_push_r11",
+          "name": "AVR assembler / should correctly assemble `PUSH r11`",
+          "line": 257,
+          "assertions": 1
+        },
+        {
+          "id": "case_057_should_correctly_assemble_rcall_6",
+          "name": "AVR assembler / should correctly assemble `RCALL +6`",
+          "line": 261,
+          "assertions": 1
+        },
+        {
+          "id": "case_058_should_correctly_assemble_rcall_4",
+          "name": "AVR assembler / should correctly assemble `RCALL -4`",
+          "line": 265,
+          "assertions": 1
+        },
+        {
+          "id": "case_059_should_correctly_assemble_ret",
+          "name": "AVR assembler / should correctly assemble `RET`",
+          "line": 269,
+          "assertions": 1
+        },
+        {
+          "id": "case_060_should_correctly_assemble_reti",
+          "name": "AVR assembler / should correctly assemble `RETI`",
+          "line": 273,
+          "assertions": 1
+        },
+        {
+          "id": "case_061_should_correctly_assemble_rjmp_2",
+          "name": "AVR assembler / should correctly assemble `RJMP 2`",
+          "line": 277,
+          "assertions": 1
+        },
+        {
+          "id": "case_062_should_correctly_assemble_ror_r0",
+          "name": "AVR assembler / should correctly assemble `ROR r0`",
+          "line": 281,
+          "assertions": 1
+        },
+        {
+          "id": "case_063_should_correctly_assemble_sbci_r23_3",
+          "name": "AVR assembler / should correctly assemble `SBCI r23, 3`",
+          "line": 285,
+          "assertions": 1
+        },
+        {
+          "id": "case_064_should_correctly_assemble_sbi_0x0c_5",
+          "name": "AVR assembler / should correctly assemble `SBI 0x0c, 5`",
+          "line": 289,
+          "assertions": 1
+        },
+        {
+          "id": "case_065_should_correctly_assemble_sbis_0x0c_5",
+          "name": "AVR assembler / should correctly assemble `SBIS 0x0c, 5`",
+          "line": 293,
+          "assertions": 1
+        },
+        {
+          "id": "case_066_should_correctly_assemble_sbiw_r28_2",
+          "name": "AVR assembler / should correctly assemble `SBIW r28, 2`",
+          "line": 297,
+          "assertions": 1
+        },
+        {
+          "id": "case_067_should_correctly_assemble_sleep",
+          "name": "AVR assembler / should correctly assemble `SLEEP`",
+          "line": 301,
+          "assertions": 1
+        },
+        {
+          "id": "case_068_should_correctly_assemble_spm",
+          "name": "AVR assembler / should correctly assemble `SPM`",
+          "line": 305,
+          "assertions": 1
+        },
+        {
+          "id": "case_069_should_correctly_assemble_spm_z",
+          "name": "AVR assembler / should correctly assemble `SPM Z+`",
+          "line": 309,
+          "assertions": 1
+        },
+        {
+          "id": "case_070_should_correctly_assemble_sts_0x151_r31",
+          "name": "AVR assembler / should correctly assemble `STS 0x151, r31`",
+          "line": 313,
+          "assertions": 1
+        },
+        {
+          "id": "case_071_should_correctly_assemble_st_x_r1",
+          "name": "AVR assembler / should correctly assemble `ST X, r1`",
+          "line": 317,
+          "assertions": 1
+        },
+        {
+          "id": "case_072_should_correctly_assemble_st_x_r1",
+          "name": "AVR assembler / should correctly assemble `ST X+, r1`",
+          "line": 321,
+          "assertions": 1
+        },
+        {
+          "id": "case_073_should_correctly_assemble_st_x_r17",
+          "name": "AVR assembler / should correctly assemble `ST -X, r17`",
+          "line": 325,
+          "assertions": 1
+        },
+        {
+          "id": "case_074_should_correctly_assemble_st_y_r2",
+          "name": "AVR assembler / should correctly assemble `ST Y, r2`",
+          "line": 329,
+          "assertions": 1
+        },
+        {
+          "id": "case_075_should_correctly_assemble_st_y_r1",
+          "name": "AVR assembler / should correctly assemble `ST Y+, r1`",
+          "line": 333,
+          "assertions": 1
+        },
+        {
+          "id": "case_076_should_correctly_assemble_st_y_r1",
+          "name": "AVR assembler / should correctly assemble `ST -Y, r1`",
+          "line": 337,
+          "assertions": 1
+        },
+        {
+          "id": "case_077_should_correctly_assemble_std_y_17_r0",
+          "name": "AVR assembler / should correctly assemble `STD Y+17, r0`",
+          "line": 341,
+          "assertions": 1
+        },
+        {
+          "id": "case_078_should_correctly_assemble_st_z_r16",
+          "name": "AVR assembler / should correctly assemble `ST Z, r16`",
+          "line": 345,
+          "assertions": 1
+        },
+        {
+          "id": "case_079_should_correctly_assemble_st_z_r0",
+          "name": "AVR assembler / should correctly assemble `ST Z+, r0`",
+          "line": 349,
+          "assertions": 1
+        },
+        {
+          "id": "case_080_should_correctly_assemble_st_z_r16",
+          "name": "AVR assembler / should correctly assemble `ST -Z, r16`",
+          "line": 353,
+          "assertions": 1
+        },
+        {
+          "id": "case_081_should_correctly_assemble_std_z_1_r0",
+          "name": "AVR assembler / should correctly assemble `STD Z+1, r0`",
+          "line": 357,
+          "assertions": 1
+        },
+        {
+          "id": "case_082_should_correctly_assemble_swap_r1",
+          "name": "AVR assembler / should correctly assemble `SWAP r1`",
+          "line": 361,
+          "assertions": 1
+        },
+        {
+          "id": "case_083_should_correctly_assemble_xch_z_r21",
+          "name": "AVR assembler / should correctly assemble `XCH Z, r21`",
+          "line": 365,
+          "assertions": 1
+        }
+      ]
+    }
+  ]
+}
