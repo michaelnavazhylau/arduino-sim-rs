@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 //! Typed, inspectable Rust scenarios, not embedded JavaScript source.
 #[derive(Clone, Debug)]
 pub enum Expr {

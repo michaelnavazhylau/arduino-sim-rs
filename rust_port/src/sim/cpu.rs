@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) Uri Shaked and contributors
+
 //! Native port of `avr8js/src/cpu/{cpu,interrupt,instruction}.ts`.
 //!
 //! The executor mirrors upstream's decoder branch-for-branch, including its

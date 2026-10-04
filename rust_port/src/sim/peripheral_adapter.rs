@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) Uri Shaked and contributors
+
 //! Registry adapter for the remaining peripherals. Never hold a registry borrow
 //! across host callbacks; publish actual live objects and restore on unwinding.
 use super::{

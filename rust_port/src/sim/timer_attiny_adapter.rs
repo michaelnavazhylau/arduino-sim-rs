@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) Uri Shaked and contributors
+
 //! ATtiny Timer1 native dispatch, including shared-register hook chaining.
 use super::{
     as_handle,

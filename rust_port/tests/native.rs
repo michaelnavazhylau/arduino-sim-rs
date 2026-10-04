@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 //! Regression cases beyond the converted upstream inventory.
 use avr_port_tests::{native_backend, runtime::Handle, scenario::*, Backend, Case, Runtime, Value};
 use std::{

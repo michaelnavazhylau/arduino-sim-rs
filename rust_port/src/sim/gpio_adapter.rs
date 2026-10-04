@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) Uri Shaked and contributors
+
 //! GPIO object dispatch, register hooks and synchronous listener boundaries.
 use super::{as_handle, cpu::Cpu, gpio::*, Object, Simulator};
 use crate::runtime::{deep_equal, Handle, Runtime, Value};

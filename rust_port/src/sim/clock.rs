@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) Uri Shaked and contributors
+
 //! Native port of `avr8js/src/peripherals/clock.ts`.
 use super::cpu::Cpu;
 use crate::runtime::Handle;

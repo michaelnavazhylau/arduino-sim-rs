@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 //! End-to-end check: compile a sketch with `arduino-cli` and execute the
 //! resulting ATmega328P firmware on the native backend.
 //!

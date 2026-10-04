@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) Uri Shaked and contributors
+
 //! Native Rust scenario runner and simulator adapter contract.
 use crate::scenario::*;
 use std::{cell::RefCell, collections::BTreeMap, rc::Rc};

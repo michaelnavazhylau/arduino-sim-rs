@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) Uri Shaked and contributors
+
 //! Native port of `avr8js/src/peripherals/gpio.ts`.
 //!
 //! Output changes collect listener notifications; the adapter invokes them with

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) Uri Shaked and contributors
+
 //! Native Rust port of `avr8js/src/utils/assembler.ts`.
 //!
 //! The assembler is a two-pass, byte-addressed dialect with its own grammar and

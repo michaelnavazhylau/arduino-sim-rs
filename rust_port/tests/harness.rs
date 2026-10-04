@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 use avr_port_tests::{
     runtime::{deep_equal, Handle},
     scenario::*,

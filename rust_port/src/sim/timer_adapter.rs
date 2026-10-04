@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) Uri Shaked and contributors
+
 //! Timer registry dispatch and synchronous, reentrant GPIO boundaries.
 use super::{
     as_handle,

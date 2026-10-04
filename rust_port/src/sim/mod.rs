@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) Uri Shaked and contributors
+
 //! Native Rust AVR simulator used by the converted behavior scenarios.
 //!
 //! This is the real backend behind [`crate::native_backend`]: no JavaScript, no

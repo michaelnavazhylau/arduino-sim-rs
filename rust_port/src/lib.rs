@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 //! Behavioral tests for a native AVR simulator. No JavaScript runtime is used.
 //!
 //! The Rust scenario representation deliberately separates test behavior from the

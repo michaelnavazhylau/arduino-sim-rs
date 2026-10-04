@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) Uri Shaked and contributors
+
 //! Shared native dispatch contract for EEPROM, ADC, serial peripherals and watchdog.
 //! Source-compatible callbacks execute synchronously through the adapter, not JS.
 use super::cpu::{Cpu, InterruptConfig};
