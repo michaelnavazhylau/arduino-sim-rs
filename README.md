@@ -22,15 +22,20 @@ For an existing clone, initialize the reference with
   `bee6f0a94e0e27786f6bc21aee3c775849fb50fd`.
 
 **All 347 converted scenarios pass by default**, with **zero ignored cases**
-and 45 supporting tests (392 tests total). Implementation milestones 0–6 are
+and 46 supporting tests (393 tests total). Implementation milestones 0–6 are
 complete: assembler, CPU/instructions/interrupts, clock, GPIO, megaAVR timers,
 ATtiny Timer1, EEPROM, ADC, SPI, USART, TWI master states and watchdog.
 Passing tests establish the converted baseline, not complete AVR8js API parity
-or hardware fidelity.
+or hardware fidelity. The supporting set includes an `arduino-cli` integration
+test that compiles an ATmega328P sketch and runs the produced HEX image on the
+native backend (skipped when the `arduino:avr` core is unavailable).
 
 Run `bash rust_port/tools/verify-native.sh` for the debug/release native parity
 gate. GitHub Actions also checks deterministic conversion against the pinned
-reference. Node/TypeScript is used only for conversion tooling, not simulation.
+reference. A separate `Arduino CLI end-to-end` workflow installs a SHA256-pinned
+`arduino-cli` plus the pinned `arduino:avr` core (cached) and runs the compiled
+sketch test against the native backend. Node/TypeScript is used only for
+conversion tooling, not simulation.
 
 See [`rust_port/README.md`](rust_port/README.md) for checks and regeneration, and
 [`rust_port/specs/backend-plan.md`](rust_port/specs/backend-plan.md) for milestones

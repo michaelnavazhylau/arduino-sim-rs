@@ -27,8 +27,17 @@ cargo clippy --all-targets --offline -- -D warnings
 
 **All 347 converted scenarios run and pass by default** (14 suites), with
 **zero ignored cases**. Another 4 assembler unit tests, 13 harness/coverage tests,
-8 original native regressions and 20 peripheral/recovery regressions pass:
-**392 tests total** in both debug and release builds.
+8 original native regressions, 20 peripheral/recovery regressions and the
+toolchain-gated `arduino_cli` end-to-end check pass: **393 tests total** in both
+debug and release builds.
+
+`tests/arduino_cli.rs` compiles [`tests/arduino-cli/uno_probe`](tests/arduino-cli/uno_probe)
+with `arduino-cli` for `arduino:avr:uno` and executes the resulting HEX image on
+the native backend, exercising the real ATmega328P register and interrupt-vector
+map. It skips when the `arduino:avr` core is unavailable, so the default suite
+stays hermetic; set `AVR_SIM_REQUIRE_ARDUINO_CLI=1` to make a missing toolchain a
+failure. The LED/millis timing assertion needs a multi-second simulation and runs
+in release builds.
 
 A green build validates the converted compatibility baseline, **not complete
 AVR8js API parity or hardware correctness**. Unsupported constructors and methods
@@ -40,6 +49,7 @@ cargo test peripherals_timer              # both native timer suites
 cargo test peripherals_spi                # native SPI suite
 cargo test --test peripherals             # peripheral edge/reentry regressions
 cargo test --test peripheral_recovery     # panic recovery and callback ordering
+AVR_SIM_REQUIRE_ARDUINO_CLI=1 cargo test --release --test arduino_cli  # real HEX image
 bash tools/verify-native.sh               # full debug/release parity gate
 ```
 
@@ -60,6 +70,8 @@ check the conversion, never to compile or execute the Rust scenarios.
   USART, TWI and watchdog. `peripheral_adapter.rs` handles registry/callback
   ownership; `peripheral.rs` supplies common event and interrupt dispatch.
 - `tests/harness.rs`: executable harness regressions and inventory checks.
+- `tests/arduino_cli.rs`: compiles `tests/arduino-cli/uno_probe` with arduino-cli
+  and runs the produced ATmega328P HEX image on the native backend (see above).
 - `tests/native.rs`: arithmetic flags, synchronous callback reentry, panic recovery,
   hook fallback/chaining and Tiny PWM regression tests.
 - `tests/peripherals.rs`, `tests/peripheral_recovery.rs`: EEPROM protection,
