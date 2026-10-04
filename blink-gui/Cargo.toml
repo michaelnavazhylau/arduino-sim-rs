@@ -1,0 +1,22 @@
+[package]
+name = "blink-gui"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+description = "Raylib GUI that runs a real Arduino blink sketch on the native AVR simulator"
+repository = "https://github.com/michaelnavazhylau/arduino-sim-rs"
+publish = false
+
+# Deliberately outside the `rust_port` package: `rust_port` stays
+# dependency-free and its `--locked --offline` CI gate is unaffected.
+[dependencies]
+avr-port-tests = { path = "../rust_port" }
+analog-solver = { path = "../analog-solver" }
+circuit-components = { path = "../circuit-components" }
+# `nobuild` links the system raylib instead of compiling the vendored copy with
+# cmake. See README.md for the matching linker search path.
+raylib = { version = "6.0", default-features = false, features = ["nobuild"] }
+
+[profile.release]
+# The simulator is the bottleneck; thin LTO is a cheap win for a real-time loop.
+lto = "thin"

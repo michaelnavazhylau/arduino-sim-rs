@@ -1,0 +1,7 @@
+# RUSTFLAGS from a `[build]` table would also apply on platforms where the
+# system raylib lives somewhere else, so scope the search path per target.
+[target.aarch64-apple-darwin]
+rustflags = ["-L", "/opt/homebrew/lib"]
+
+[target.x86_64-apple-darwin]
+rustflags = ["-L", "/usr/local/lib"]

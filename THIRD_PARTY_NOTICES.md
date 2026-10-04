@@ -70,8 +70,16 @@ count and SHA-256 hash — is published, in
 
 ## Rust dependencies
 
-None. `rust_port` has an empty `[dependencies]` table, so no third-party Rust
-code is compiled into the simulator.
+`rust_port` has an empty `[dependencies]` table, so no third-party Rust code is
+compiled into the simulator, its test harness or its CI gate.
+
+The optional [`blink-gui/`](blink-gui/) demo does pull in
+[raylib-rs](https://github.com/raysan5/raylib-rs) (`raylib` / `raylib-sys` +
+~40 transitive crates), fetched from the package index at build time and not
+part of this repository. raylib-rs is distributed under the Zlib license, and
+raylib itself under the zlib/libpng license. `blink-gui` is configured with the
+`nobuild` feature, which links the raylib already installed on the host instead
+of compiling a vendored copy, so no raylib source is redistributed here.
 
 ## Development tooling — not distributed
 

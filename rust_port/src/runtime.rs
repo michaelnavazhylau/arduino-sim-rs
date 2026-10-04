@@ -35,6 +35,14 @@ impl Value {
             _ => panic!("expected number, got {self:?}"),
         }
     }
+    /// Backend-owned identity of a native object.
+    #[track_caller]
+    pub fn handle(&self) -> Handle {
+        match self {
+            Self::Handle(handle) => *handle,
+            _ => panic!("expected a native handle, got {self:?}"),
+        }
+    }
     pub fn string(&self) -> String {
         match self {
             Self::Text(s) => s.clone(),
@@ -147,6 +155,15 @@ pub struct Runtime {
     /// Number of dynamically executed assertions (callback assertions included).
     pub assertions_executed: usize,
 }
+
+/// Callbacks one [`Runtime`] may dispatch before the budget assertion fires.
+///
+/// The budget exists so an accidentally non-terminating scenario fails instead
+/// of hanging. A long-running host (a GUI stepping real firmware) reaches it
+/// through ordinary timer interrupts and should call [`Runtime::reset_budget`]
+/// rather than building a fresh `Runtime`.
+pub const DEFAULT_BUDGET: usize = 1_000_000;
+
 impl Runtime {
     pub fn new(backend: Rc<dyn Backend>) -> Self {
         Self {
@@ -159,9 +176,26 @@ impl Runtime {
             source: "<harness>".into(),
             name: String::new(),
             line: 0,
-            remaining: 1_000_000,
+            remaining: DEFAULT_BUDGET,
             assertions_executed: 0,
         }
+    }
+    /// Callbacks still available before the scenario budget assertion fires.
+    pub fn remaining_budget(&self) -> usize {
+        self.remaining
+    }
+    /// Restore the callback budget to [`DEFAULT_BUDGET`].
+    ///
+    /// Peripheral state lives in the backend and scheduled callbacks are
+    /// stateless, so refilling is behaviorally equivalent to building a fresh
+    /// `Runtime` and far cheaper for a long simulation loop.
+    pub fn reset_budget(&mut self) {
+        self.remaining = DEFAULT_BUDGET;
+    }
+    /// Set an explicit callback budget. Values are clamped to at least 1 so a
+    /// zero budget cannot turn the next dispatches into a confusing panic.
+    pub fn set_budget(&mut self, budget: usize) {
+        self.remaining = budget.max(1);
     }
     /// A Runtime represents one case; create a fresh instance for every test.
     pub fn run(&mut self, case: &Case) {

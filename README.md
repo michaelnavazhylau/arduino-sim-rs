@@ -18,6 +18,14 @@ For an existing clone, initialize the reference with
 
 - [`rust_port/`](rust_port/): dependency-free Rust implementation, test harness,
   generated scenarios, conversion tools and specification provenance.
+- [`blink-gui/`](blink-gui/): optional raylib GUI that runs a real blink sketch
+  on the simulator, as a flat schematic or a procedural 3D rendition of the Uno.
+  Kept outside `rust_port` so the core stays dependency-free and the offline
+  parity gate is unaffected.
+- [`analog-solver/`](analog-solver/): independent, dependency-free nonlinear DC
+  MNA solver (node voltages, signed branch currents and power).
+- [`circuit-components/`](circuit-components/): resistor and directional Shockley
+  LED models, depending only on `analog-solver`; includes a headless example.
 - [`avr8js/`](avr8js/): upstream reference submodule pinned at
   `bee6f0a94e0e27786f6bc21aee3c775849fb50fd`.
 
@@ -37,10 +45,32 @@ reference. A separate `Arduino CLI end-to-end` workflow installs a SHA256-pinned
 sketch test against the native backend. Node/TypeScript is used only for
 conversion tooling, not simulation.
 
+`rust_port` exposes a small host-side API for running firmware outside the
+converted scenarios: [`board::parse_hex`](rust_port/src/board.rs) decodes Intel
+HEX, `Board::uno` wires the ATmega328P device profile, and `Board::step`
+advances one instruction plus its peripheral tick. [`blink-gui/`](blink-gui/)
+is a worked example — a raylib window with a schematic view and a procedural 3D
+board. `PORTB5` drives a finite-impedance source feeding a 220 Ω resistor and
+LED; the external LED's brightness follows solved forward current, and reversing
+it blocks conduction. The UI shows voltage/current/power. This is a nonlinear DC
+model, not transient SPICE or an active current regulator. Verify the separate
+electrical libraries with `bash analog-solver/tools/verify-analog.sh`.
+The GUI crate links a system raylib and is
+intentionally not part of the offline CI gate; see its README for requirements,
+for why raylib cannot load STL, and for the `nobuild` camera-module caveat.
+
 See [`rust_port/README.md`](rust_port/README.md) for checks and regeneration, and
 [`rust_port/specs/backend-plan.md`](rust_port/specs/backend-plan.md) for milestones
 and residual limitations. Downloaded vendor PDFs/text and build dependencies
 are excluded from Git; their pinned provenance and fetch/check tools are included.
+
+## Future electrical simulation work
+
+The [sim2real implementation roadmap](docs/sim2real-roadmap.md) records the planned
+path from today's nonlinear DC demo to backward-Euler RC/RL transients,
+BJT/MOSFET models, deterministic AVR/analog time coupling, practical parasitics,
+tolerances and temperature. It includes architecture boundaries and acceptance
+criteria; these are future capabilities, not current feature claims.
 
 ## License and citation
 

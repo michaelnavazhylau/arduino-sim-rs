@@ -1,0 +1,9 @@
+[package]
+name = "analog-solver"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+description = "Small dependency-free nonlinear DC circuit solver using modified nodal analysis"
+publish = false
+
+[dependencies]

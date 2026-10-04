@@ -4,10 +4,12 @@
 //!
 //! The Rust scenario representation deliberately separates test behavior from the
 //! simulator's evolving ownership model. See `Backend` and the project README.
+pub mod board;
 pub mod runtime;
 pub mod scenario;
 pub mod sim;
 pub mod suites;
+pub use board::Board;
 pub use runtime::{Backend, Runtime, Value};
 pub use scenario::Case;
 

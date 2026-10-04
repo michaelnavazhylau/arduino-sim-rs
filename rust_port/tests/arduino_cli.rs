@@ -13,8 +13,8 @@
 //! so it only runs in release builds. `tools/verify-native.sh` runs both
 //! profiles and therefore exercises it.
 
-use avr_port_tests::runtime::Handle;
-use avr_port_tests::{native_backend, Backend, Runtime, Value};
+use avr_port_tests::board::{parse_hex, Board, PinState, LED_BUILTIN_PIN, PORTB};
+use avr_port_tests::{native_backend, Backend, Runtime};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::rc::Rc;
@@ -22,28 +22,26 @@ use std::rc::Rc;
 const BOARD: &str = "arduino:avr:uno";
 const SKETCH: &str = "uno_probe";
 const CLOCK_HZ: f64 = 16_000_000.0;
-/// SRAM bytes on an ATmega328P. A real sketch sets SP from its own startup code.
-const SRAM_BYTES: f64 = 2048.0;
-/// Flash bytes on an ATmega328P; loaded images are padded to the full device.
-const FLASH_BYTES: usize = 0x8000;
 
 // Data-space observation points written by the sketch. See the sketch header.
 const GPIOR0: usize = 0x3e; // millis() / 100
 const GPIOR1: usize = 0x4a; // 0x77 once the UART TX ring drained
 const GPIOR2: usize = 0x4b; // 0x5a set from the INT0 handler
-const PORTB: usize = 0x25; // bit 5 mirrors digitalWrite(13)
 
 const TX_DRAINED: i64 = 0x77;
 const INT0_RAN: i64 = 0x5a;
-const PB5: i64 = 0x20;
+const PB5: i64 = (1u8 << LED_BUILTIN_PIN) as i64;
 const EEPROM_SEED: u8 = 42;
 
 /// Total clock cycles a run must exceed before the LED-timing assertion is
 /// meaningful (roughly 1.6 s, enough for the third 500 ms boundary).
 const TIMING_MIN_CYCLES: f64 = 25_000_000.0;
-/// Step interval after which the scenario Runtime is recreated to reset its
-/// callback budget. Kept below the 1e6 budget so a slice never exhausts it.
-const RECYCLE_STEPS: u64 = 4_000_000;
+/// Step interval between callback-budget refills.
+///
+/// One instruction dispatches at most a clock event and an interrupt, so a
+/// 250k-instruction slice can consume at most 750k of the
+/// `DEFAULT_BUDGET`-sized budget.
+const BUDGET_REFILL_STEPS: u64 = 250_000;
 
 #[test]
 fn compiles_and_runs_uno_sketch() {
@@ -61,7 +59,7 @@ fn compiles_and_runs_uno_sketch() {
 
     let backend: Rc<dyn Backend> = native_backend();
     let mut runtime = Runtime::new(backend.clone());
-    let board = build_uno(backend.as_ref(), &mut runtime, firmware);
+    let board = Board::uno(backend.as_ref(), &mut runtime, firmware);
 
     // Debug builds step a shorter window; release builds reach the LED boundary.
     let steps: u64 = if cfg!(debug_assertions) {
@@ -75,61 +73,60 @@ fn compiles_and_runs_uno_sketch() {
     let mut stalled_samples = 0u32;
 
     for step in 0..steps {
-        // The scenario Runtime enforces a 1e6-callback budget, which a long
-        // simulation of real firmware outgrows. Peripheral state lives in the
-        // backend and every scheduled callback is a stateless Native, so
-        // recycling the Runtime is behaviorally equivalent.
-        if step > 0 && step % RECYCLE_STEPS == 0 {
-            runtime = Runtime::new(backend.clone());
+        // A run this long dispatches more callbacks than one Runtime budget
+        // allows. Peripheral state lives in the backend and every scheduled
+        // callback is a stateless Native, so refilling the budget is
+        // behaviorally equivalent to building a fresh Runtime, and cheaper.
+        if step > 0 && step % BUDGET_REFILL_STEPS == 0 {
+            runtime.reset_budget();
         }
-        backend.call(
-            &mut runtime,
-            None,
-            "avrInstruction",
-            vec![board.cpu.clone()],
-        );
-        backend.call(&mut runtime, Some(board.cpu_handle), "tick", vec![]);
+        board.step(backend.as_ref(), &mut runtime);
         if step % 100_000 == 0 {
-            let pc = number(backend.get(board.cpu_handle, "pc")) as i64;
+            let pc = backend.get(board.cpu_handle, "pc").number() as i64;
             stalled_samples = if pc == last_pc {
                 stalled_samples + 1
             } else {
                 0
             };
             last_pc = pc;
-            pb5_samples.push(read_byte(backend.as_ref(), board.data, PORTB) & PB5);
+            pb5_samples.push(board.read_data(backend.as_ref(), PORTB) as i64 & PB5);
         }
     }
 
-    let cycles = number(backend.get(board.cpu_handle, "cycles"));
-    let millis_coarse = read_byte(backend.as_ref(), board.data, GPIOR0);
-    let tx_drained = read_byte(backend.as_ref(), board.data, GPIOR1);
-    let int0_before = read_byte(backend.as_ref(), board.data, GPIOR2);
+    let cycles = board.cycles(backend.as_ref());
+    let millis_coarse = board.read_data(backend.as_ref(), GPIOR0) as i64;
+    let tx_drained = board.read_data(backend.as_ref(), GPIOR1) as i64;
+    let int0_before = board.read_data(backend.as_ref(), GPIOR2) as i64;
+
+    // Fresh budget for the interrupt phase, so budget accounting cannot be
+    // confused with the INT0 assertion below.
+    runtime.reset_budget();
 
     // Drive PD2 low then high so the CHANGE-mode INT0 handler must fire.
     for level in [false, true] {
-        backend.call(
-            &mut runtime,
-            Some(board.portd),
-            "setPin",
-            vec![Value::Number(2.0), Value::Bool(level)],
-        );
+        board.set_input(backend.as_ref(), &mut runtime, board.portd, 2, level);
     }
-    for _ in 0..200_000 {
-        backend.call(
-            &mut runtime,
-            None,
-            "avrInstruction",
-            vec![board.cpu.clone()],
-        );
-        backend.call(&mut runtime, Some(board.cpu_handle), "tick", vec![]);
-    }
-    let int0_after = read_byte(backend.as_ref(), board.data, GPIOR2);
+    board.run_cycles(backend.as_ref(), &mut runtime, 200_000);
+    let int0_after = board.read_data(backend.as_ref(), GPIOR2) as i64;
 
-    let eeprom = match backend.get(board.eeprom, "memory") {
-        Value::Buffer { bytes, .. } => bytes.borrow()[0],
-        other => panic!("expected an EEPROM buffer, got {other:?}"),
+    let eeprom = board.eeprom_bytes(backend.as_ref())[0];
+
+    // The board helpers must agree with direct register observation.
+    let expected_led = if board.read_bit(backend.as_ref(), PORTB, LED_BUILTIN_PIN) {
+        PinState::High
+    } else {
+        PinState::Low
     };
+    assert_eq!(
+        board.led_builtin(backend.as_ref(), &mut runtime),
+        expected_led,
+        "led_builtin disagrees with the PORTB5 output latch"
+    );
+    assert_eq!(
+        board.pin_state(backend.as_ref(), &mut runtime, board.portd, 2),
+        PinState::InputPullUp,
+        "PD2 is configured INPUT_PULLUP but does not report as pulled up"
+    );
 
     eprintln!(
         "cycles={cycles} ms={millis_coarse}00 tx=0x{tx_drained:x} int0=0x{int0_after:x} \
@@ -182,103 +179,6 @@ fn compiles_and_runs_uno_sketch() {
     }
 }
 
-/// Everything a bare ATmega328P board needs, wired to the real device profile.
-struct Board {
-    cpu: Value,
-    cpu_handle: Handle,
-    data: Handle,
-    eeprom: Handle,
-    portd: Handle,
-}
-
-fn build_uno(backend: &dyn Backend, runtime: &mut Runtime, flash: Vec<u8>) -> Board {
-    let cpu = backend.construct(
-        runtime,
-        "CPU",
-        vec![Value::buffer(flash, 2), Value::Number(SRAM_BYTES)],
-    );
-    let cpu_handle = as_handle(&cpu);
-    let frequency = Value::Number(CLOCK_HZ);
-
-    let clock = backend.construct(
-        runtime,
-        "AVRClock",
-        vec![
-            cpu.clone(),
-            frequency.clone(),
-            backend.resolve("clockConfig"),
-        ],
-    );
-
-    let mut portd = None;
-    for name in ["portBConfig", "portCConfig", "portDConfig"] {
-        let port = backend.construct(
-            runtime,
-            "AVRIOPort",
-            vec![cpu.clone(), backend.resolve(name)],
-        );
-        if name == "portDConfig" {
-            portd = Some(as_handle(&port));
-        }
-    }
-    for name in ["timer0Config", "timer1Config", "timer2Config"] {
-        backend.construct(
-            runtime,
-            "AVRTimer",
-            vec![cpu.clone(), backend.resolve(name)],
-        );
-    }
-    backend.construct(
-        runtime,
-        "AVRUSART",
-        vec![
-            cpu.clone(),
-            backend.resolve("usart0Config"),
-            frequency.clone(),
-        ],
-    );
-    backend.construct(
-        runtime,
-        "AVRADC",
-        vec![cpu.clone(), backend.resolve("adcConfig")],
-    );
-    backend.construct(
-        runtime,
-        "AVRSPI",
-        vec![cpu.clone(), backend.resolve("spiConfig"), frequency.clone()],
-    );
-    backend.construct(
-        runtime,
-        "AVRTWI",
-        vec![cpu.clone(), backend.resolve("twiConfig"), frequency],
-    );
-
-    let eeprom_backend =
-        backend.construct(runtime, "EEPROMMemoryBackend", vec![Value::Number(1024.0)]);
-    backend.construct(
-        runtime,
-        "AVREEPROM",
-        vec![
-            cpu.clone(),
-            eeprom_backend.clone(),
-            backend.resolve("eepromConfig"),
-        ],
-    );
-    backend.construct(
-        runtime,
-        "AVRWatchdog",
-        vec![cpu.clone(), backend.resolve("watchdogConfig"), clock],
-    );
-
-    Board {
-        data: as_handle(&backend.get(cpu_handle, "data")),
-        eeprom: as_handle(&eeprom_backend),
-        portd: portd.expect("portDConfig must be resolvable"),
-        cpu,
-        cpu_handle,
-    }
-}
-
 fn arduino_cli_available() -> bool {
     let version = Command::new("arduino-cli").arg("version").output();
     if !matches!(&version, Ok(output) if output.status.success()) {
@@ -310,49 +210,4 @@ fn compile_sketch() -> String {
 
     let hex = build.join(format!("{SKETCH}.ino.hex"));
     std::fs::read_to_string(&hex).unwrap_or_else(|error| panic!("read {}: {error}", hex.display()))
-}
-
-fn as_handle(value: &Value) -> Handle {
-    match value {
-        Value::Handle(handle) => *handle,
-        other => panic!("expected a native handle, got {other:?}"),
-    }
-}
-
-fn number(value: Value) -> f64 {
-    match value {
-        Value::Number(number) => number,
-        other => panic!("expected a number, got {other:?}"),
-    }
-}
-
-fn read_byte(backend: &dyn Backend, data: Handle, address: usize) -> i64 {
-    match backend.get(data, &address.to_string()) {
-        Value::Number(value) => value as i64,
-        other => panic!("expected a number at {address:#x}, got {other:?}"),
-    }
-}
-
-/// Minimal Intel HEX reader. Unwritten flash is left at `0xff`, matching an
-/// erased ATmega328P.
-fn parse_hex(text: &str) -> Vec<u8> {
-    let mut flash = vec![0xffu8; FLASH_BYTES];
-    for line in text.lines() {
-        let line = line.trim();
-        let Some(record) = line.strip_prefix(':') else {
-            continue;
-        };
-        let bytes: Vec<u8> = (0..record.len() / 2)
-            .map(|index| {
-                let pair = &record[2 * index..2 * index + 2];
-                u8::from_str_radix(pair, 16).unwrap_or_else(|_| panic!("bad hex pair {pair:?}"))
-            })
-            .collect();
-        let length = bytes[0] as usize;
-        let address = ((bytes[1] as usize) << 8) | bytes[2] as usize;
-        if bytes[3] == 0x00 {
-            flash[address..address + length].copy_from_slice(&bytes[4..4 + length]);
-        }
-    }
-    flash
 }
