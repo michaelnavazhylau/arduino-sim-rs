@@ -1,0 +1,62 @@
+name: Arduino CLI end-to-end
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  ARDUINO_CLI_VERSION: '1.5.1'
+  # Pinned SHA256 of arduino-cli_${ARDUINO_CLI_VERSION}_Linux_64bit.tar.gz, from
+  # the release's 1.5.1-checksums.txt. Update together with the version.
+  ARDUINO_CLI_SHA256: '28a8e119c498a25607821c36cb2dc49e8463941b261a0d99091baa7bc692dd2b'
+  ARDUINO_CORE_VERSION: '1.8.8'
+
+jobs:
+  arduino-cli-e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@stable
+
+      # The AVR core pulls in avr-gcc (~100 MB); reuse it across runs.
+      - name: Cache Arduino cores
+        uses: actions/cache@v4
+        with:
+          path: ~/.arduino15
+          key: arduino-${{ runner.os }}-cli${{ env.ARDUINO_CLI_VERSION }}-core${{ env.ARDUINO_CORE_VERSION }}
+
+      - name: Install arduino-cli
+        run: |
+          set -euo pipefail
+          asset="arduino-cli_${ARDUINO_CLI_VERSION}_Linux_64bit.tar.gz"
+          url="https://github.com/arduino/arduino-cli/releases/download/v${ARDUINO_CLI_VERSION}/${asset}"
+          mkdir -p "$HOME/.local/bin"
+          curl -fsSL "$url" -o /tmp/arduino-cli.tar.gz
+          echo "${ARDUINO_CLI_SHA256}  /tmp/arduino-cli.tar.gz" | sha256sum -c -
+          tar -xzf /tmp/arduino-cli.tar.gz -C "$HOME/.local/bin" arduino-cli
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          "$HOME/.local/bin/arduino-cli" version
+
+      - name: Install arduino:avr core
+        run: |
+          set -euo pipefail
+          arduino-cli core update-index
+          arduino-cli core install "arduino:avr@${ARDUINO_CORE_VERSION}"
+          arduino-cli core list
+
+      # AVR_SIM_REQUIRE_ARDUINO_CLI turns the test's toolchain skip into a
+      # failure, so a broken install cannot silently pass this gate.
+      - name: Run compiled ATmega328P firmware on the native backend
+        env:
+          AVR_SIM_REQUIRE_ARDUINO_CLI: '1'
+        run: |
+          set -euo pipefail
+          cargo test --locked --offline --test arduino_cli
+          cargo test --locked --offline --release --test arduino_cli
