@@ -17,10 +17,11 @@ env:
 
 jobs:
   arduino-cli-e2e:
-    runs-on: ubuntu-latest
+    # Pinned rather than ubuntu-latest, which migrates to Ubuntu 26 in Oct 2026.
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
       # Pinned to match the parity gate; see native-parity.yml for the rationale.
@@ -28,7 +29,7 @@ jobs:
 
       # The AVR core pulls in avr-gcc (~100 MB); reuse it across runs.
       - name: Cache Arduino cores
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.arduino15
           key: arduino-${{ runner.os }}-cli${{ env.ARDUINO_CLI_VERSION }}-core${{ env.ARDUINO_CORE_VERSION }}
