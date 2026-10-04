@@ -650,10 +650,8 @@ fn parse_code(line: &str) -> Option<(String, Option<String>, Option<String>)> {
                 .take_while(|(_, c)| !c.is_whitespace())
                 .last()
                 .map(|(i, c)| i + c.len_utf8());
-            match end {
-                Some(end) => Some(after[..end].to_string()),
-                None => return None,
-            }
+            let end = end?;
+            Some(after[..end].to_string())
         }
         None => None,
     };

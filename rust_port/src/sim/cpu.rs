@@ -94,9 +94,7 @@ impl Cpu {
     pub fn reset(&mut self) {
         self.set_sp((self.data.len() - 1) as u16);
         self.pc = 0;
-        for slot in &mut self.pending_interrupts {
-            *slot = None;
-        }
+        self.pending_interrupts.fill(None);
         self.next_interrupt = -1;
         self.next_clock_event = None;
     }
