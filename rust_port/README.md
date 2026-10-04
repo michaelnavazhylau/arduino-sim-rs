@@ -3,8 +3,9 @@
 All **14 AVR8js TypeScript test suites**, **347 test cases**, and **853 assertion
 sites** have been converted into typed Rust scenarios. The original `../avr8js/`
 implementation and tests are untouched. The native Rust backend now implements
-assembler, CPU/instructions/interrupts, clock, GPIO, megaAVR timers and ATtiny
-Timer1. There is **no JavaScript runtime or JS bridge**.
+assembler, CPU/instructions/interrupts, clock, GPIO, megaAVR timers, ATtiny
+Timer1, EEPROM, ADC, SPI, USART, TWI master states and watchdog. Milestones 0–6
+are complete. There is **no JavaScript runtime or JS bridge**.
 
 ## Hardware and compatibility specifications
 
@@ -24,20 +25,22 @@ cargo fmt --check
 cargo clippy --all-targets --offline -- -D warnings
 ```
 
-**283 of 347 converted scenarios run and pass by default** (eight suites).
-Another 4 assembler unit tests, 13 harness/coverage tests and 8 native regression
-tests pass. The remaining **64 scenarios stay explicitly ignored**: EEPROM,
-ADC, SPI, USART, TWI and watchdog are not implemented.
+**All 347 converted scenarios run and pass by default** (14 suites), with
+**zero ignored cases**. Another 4 assembler unit tests, 13 harness/coverage tests,
+8 original native regressions and 20 peripheral/recovery regressions pass:
+**392 tests total** in both debug and release builds.
 
-A green default build validates only the enabled compatibility contract, **not
-complete AVR8js parity or hardware correctness**. Unsupported constructors and
-operations fail explicitly rather than fabricating simulator behavior.
+A green build validates the converted compatibility baseline, **not complete
+AVR8js API parity or hardware correctness**. Unsupported constructors and methods
+fail explicitly rather than fabricating simulator behavior.
 
 ```sh
-cargo test -- --list                      # discover every case
-cargo test peripherals_timer             # enabled native timer suites
-cargo test peripherals_spi -- --ignored   # fails until SPI is implemented
-cargo test -- --ignored                   # remaining unsupported suites
+cargo test -- --list                       # discover every case
+cargo test peripherals_timer              # both native timer suites
+cargo test peripherals_spi                # native SPI suite
+cargo test --test peripherals             # peripheral edge/reentry regressions
+cargo test --test peripheral_recovery     # panic recovery and callback ordering
+bash tools/verify-native.sh               # full debug/release parity gate
 ```
 
 There are no Cargo dependencies. Node/TypeScript is needed only to regenerate or
@@ -53,10 +56,17 @@ check the conversion, never to compile or execute the Rust scenarios.
   and instruction-runner helpers. It implements only the test-language subset;
   it does not evaluate JS text or emulate AVR hardware.
 - `src/lib.rs`: `native_backend()` constructs a fresh native simulator adapter.
-- `src/sim/`: assembler, CPU/executor, clock, GPIO, timers and adapter dispatch.
+- `src/sim/`: assembler, CPU/executor, clock, GPIO, timers, EEPROM, ADC, SPI,
+  USART, TWI and watchdog. `peripheral_adapter.rs` handles registry/callback
+  ownership; `peripheral.rs` supplies common event and interrupt dispatch.
 - `tests/harness.rs`: executable harness regressions and inventory checks.
 - `tests/native.rs`: arithmetic flags, synchronous callback reentry, panic recovery,
   hook fallback/chaining and Tiny PWM regression tests.
+- `tests/peripherals.rs`, `tests/peripheral_recovery.rs`: EEPROM protection,
+  ADC references/differential conversion, serial timing/masking, watchdog modes,
+  synchronous peripheral/CPU reentry, call-through spies and panic restoration.
+- `tools/verify-native.sh`: fail-closed native parity gate; CI additionally runs
+  converter `--check` against the pinned submodule.
 - `conversion-manifest.json`: source hashes, original names/lines, imports, case
   mappings, and per-case assertion counts.
 - `tools/convert.cjs`: fail-closed AST converter, not a regex translation.
@@ -118,10 +128,11 @@ Important semantic requirements:
    visibly, never fabricate expected values. Harness fixtures are not native AVR
    implementations and must not be used as the real backend.
 
-Run a pending suite with `--ignored` during development. Enable it in the
-converter's `IMPLEMENTED` set only after verification; regeneration preserves the
-gate. A final parity gate must also run `cargo test -- --ignored` (or ensure zero
-ignored cases), not just the default green build.
+Every current suite is in the converter's `IMPLEMENTED` set. For future
+extensions, enable suites only after native verification; regeneration preserves
+the intended gate. `tools/verify-native.sh` rejects ignored converted scenarios
+and uses `--include-ignored` in both builds as defense in depth. The GitHub Actions
+workflow also installs pinned TypeScript and checks regeneration/source hashes.
 
 Known groundwork limitations include adapter `Value` types in native event/hook
 storage, incomplete hook introspection, constructor-buffer sharing and untested

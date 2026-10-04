@@ -21,11 +21,16 @@ For an existing clone, initialize the reference with
 - [`avr8js/`](avr8js/): upstream reference submodule pinned at
   `bee6f0a94e0e27786f6bc21aee3c775849fb50fd`.
 
-**283 of 347 converted scenarios pass by default**, alongside 25 supporting
-tests. Assembler, CPU/instructions/interrupts, clock, GPIO, megaAVR timers and
-ATtiny Timer1 are implemented. The remaining 64 scenarios for EEPROM, ADC, SPI,
-USART, TWI and watchdog stay ignored until implemented. Passing tests do not
-establish complete AVR8js parity or hardware fidelity.
+**All 347 converted scenarios pass by default**, with **zero ignored cases**
+and 45 supporting tests (392 tests total). Implementation milestones 0–6 are
+complete: assembler, CPU/instructions/interrupts, clock, GPIO, megaAVR timers,
+ATtiny Timer1, EEPROM, ADC, SPI, USART, TWI master states and watchdog.
+Passing tests establish the converted baseline, not complete AVR8js API parity
+or hardware fidelity.
+
+Run `bash rust_port/tools/verify-native.sh` for the debug/release native parity
+gate. GitHub Actions also checks deterministic conversion against the pinned
+reference. Node/TypeScript is used only for conversion tooling, not simulation.
 
 See [`rust_port/README.md`](rust_port/README.md) for checks and regeneration, and
 [`rust_port/specs/backend-plan.md`](rust_port/specs/backend-plan.md) for milestones

@@ -146,7 +146,6 @@ pub fn case_001_should_correctly_calculate_the_prescaler_from_wdtcsr() -> Case {
     }
 }
 #[test]
-#[ignore = "native peripheral implementation pending"]
 fn case_001_should_correctly_calculate_the_prescaler_from_wdtcsr_native() {
     crate::run_native(case_001_should_correctly_calculate_the_prescaler_from_wdtcsr());
 }
@@ -270,7 +269,6 @@ pub fn case_002_should_not_change_the_prescaler_unless_wdce_is_set() -> Case {
     }
 }
 #[test]
-#[ignore = "native peripheral implementation pending"]
 fn case_002_should_not_change_the_prescaler_unless_wdce_is_set_native() {
     crate::run_native(case_002_should_not_change_the_prescaler_unless_wdce_is_set());
 }
@@ -415,7 +413,6 @@ pub fn case_003_should_reset_the_cpu_when_the_timer_expires() -> Case {
     }
 }
 #[test]
-#[ignore = "native peripheral implementation pending"]
 fn case_003_should_reset_the_cpu_when_the_timer_expires_native() {
     crate::run_native(case_003_should_reset_the_cpu_when_the_timer_expires());
 }
@@ -582,7 +579,6 @@ pub fn case_004_should_extend_the_watchdog_timeout_when_executing_a_wdr_instruct
     }
 }
 #[test]
-#[ignore = "native peripheral implementation pending"]
 fn case_004_should_extend_the_watchdog_timeout_when_executing_a_wdr_instruction_native() {
     crate::run_native(
         case_004_should_extend_the_watchdog_timeout_when_executing_a_wdr_instruction(),
@@ -740,7 +736,6 @@ pub fn case_005_should_fire_an_interrupt_when_the_watchdog_expires_and_wdie_is_s
     }
 }
 #[test]
-#[ignore = "native peripheral implementation pending"]
 fn case_005_should_fire_an_interrupt_when_the_watchdog_expires_and_wdie_is_set_native() {
     crate::run_native(
         case_005_should_fire_an_interrupt_when_the_watchdog_expires_and_wdie_is_set(),
@@ -900,7 +895,6 @@ pub fn case_006_should_not_reset_the_cpu_if_the_watchdog_has_been_disabled() -> 
     }
 }
 #[test]
-#[ignore = "native peripheral implementation pending"]
 fn case_006_should_not_reset_the_cpu_if_the_watchdog_has_been_disabled_native() {
     crate::run_native(case_006_should_not_reset_the_cpu_if_the_watchdog_has_been_disabled());
 }

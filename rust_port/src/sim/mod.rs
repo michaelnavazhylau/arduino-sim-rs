@@ -1,17 +1,25 @@
 //! Native Rust AVR simulator used by the converted behavior scenarios.
 //!
 //! This is the real backend behind [`crate::native_backend`]: no JavaScript, no
-//! bridge. It grows milestone-by-milestone as described in
-//! `specs/backend-plan.md`; unsupported objects and methods still fail loudly.
+//! bridge. Milestones 0–6 in `specs/backend-plan.md` implement the converted
+//! compatibility baseline; unsupported objects and methods still fail loudly.
+mod adc;
 pub mod assembler;
 pub mod clock;
 pub mod cpu;
+mod eeprom;
 pub mod gpio;
 mod gpio_adapter;
+mod peripheral;
+mod peripheral_adapter;
+mod spi;
 pub mod timer;
 mod timer_adapter;
 pub mod timer_attiny;
 mod timer_attiny_adapter;
+mod twi;
+mod usart;
+mod watchdog;
 
 use crate::runtime::{Backend, Handle, Runtime, Value};
 use clock::{Clock, DEFAULT_CLKPR};
@@ -34,6 +42,11 @@ enum Object {
     Gpio(Rc<RefCell<gpio::GpioPort>>),
     Timer(Box<timer::Timer>),
     TinyTimer(Box<timer_attiny::TinyTimer>),
+    Peripheral(Box<peripheral::Peripheral>),
+    EepromMemory {
+        memory: Value,
+        props: BTreeMap<String, Value>,
+    },
     Memory {
         cpu: Handle,
         kind: MemKind,
@@ -406,6 +419,8 @@ impl Object {
             Object::Gpio(_) => "AVRIOPort",
             Object::Timer(_) => "AVRTimer",
             Object::TinyTimer(_) => "ATtinyTimer1",
+            Object::Peripheral(p) => p.kind,
+            Object::EepromMemory { .. } => "EEPROMMemoryBackend",
             Object::Memory { .. } => "memory view",
             Object::Taken => "detached object",
         }
@@ -442,6 +457,9 @@ impl Simulator {
         if matches!(&self.objects.borrow()[owner.0], Object::TinyTimer(_)) {
             return self.tiny_read(runtime, owner, cpu, addr);
         }
+        if matches!(&self.objects.borrow()[owner.0], Object::Peripheral(_)) {
+            return self.peripheral_read(owner, cpu, addr);
+        }
         panic!("no native read hook at {addr:#x}");
     }
 
@@ -462,6 +480,10 @@ impl Simulator {
         }
         if matches!(&self.objects.borrow()[hook.0], Object::TinyTimer(_)) {
             self.tiny_write(runtime, hook, cpu, addr, value, mask);
+            return;
+        }
+        if matches!(&self.objects.borrow()[hook.0], Object::Peripheral(_)) {
+            self.peripheral_write(runtime, hook, cpu, addr, value, mask);
             return;
         }
         let is_gpio = matches!(&self.objects.borrow()[hook.0], Object::Gpio(_));
@@ -647,6 +669,19 @@ impl Backend for Simulator {
                 "CLKPR".into(),
                 Value::Number(DEFAULT_CLKPR as f64),
             )])),
+            "adcConfig" => adc::default_config(),
+            "atmega328Channels" => adc::channels(),
+            "ADCReference" => {
+                enum_value(&["AVCC", "AREF", "Internal1V1", "Internal2V56", "Reserved"])
+            }
+            "ADCMuxInputType" => {
+                enum_value(&["SingleEnded", "Differential", "Constant", "Temperature"])
+            }
+            "eepromConfig" => eeprom::default_config(),
+            "spiConfig" => spi::default_config(),
+            "usart0Config" => usart::default_config(),
+            "twiConfig" => twi::default_config(),
+            "watchdogConfig" => watchdog::default_config(),
             "attinyTimer1Config" => timer_attiny::config(),
             "timer0Config" => timer::config(0),
             "timer1Config" => timer::config(1),
@@ -697,6 +732,14 @@ impl Backend for Simulator {
             "AVRIOPort" => self.construct_gpio(&args),
             "AVRTimer" => self.construct_timer(runtime, &args),
             "ATtinyTimer1" => self.construct_tiny(&args),
+            "AVREEPROM"
+            | "EEPROMMemoryBackend"
+            | "AVRADC"
+            | "AVRSPI"
+            | "AVRUSART"
+            | "AVRTWI"
+            | "NoopTWIEventHandler"
+            | "AVRWatchdog" => self.construct_peripheral(kind, &args),
             other => panic!("unimplemented native constructor: {other}"),
         }
     }
@@ -709,6 +752,7 @@ impl Backend for Simulator {
             Object::Gpio(_) => "gpio",
             Object::Timer(_) => "timer",
             Object::TinyTimer(_) => "tiny",
+            Object::Peripheral(_) | Object::EepromMemory { .. } => "peripheral",
             Object::Memory { .. } => "memory",
             Object::Taken => panic!("native object {object:?} is detached"),
         };
@@ -719,6 +763,7 @@ impl Backend for Simulator {
             "gpio" => self.gpio_get(object, key),
             "timer" => self.timer_get(object, key),
             "tiny" => self.tiny_get(object, key),
+            "peripheral" => self.peripheral_get(object, key),
             _ => {
                 if key == "length" {
                     return Value::Number(self.memory_length(object));
@@ -739,6 +784,7 @@ impl Backend for Simulator {
             Object::Gpio(_) => "gpio",
             Object::Timer(_) => "timer",
             Object::TinyTimer(_) => "tiny",
+            Object::Peripheral(_) | Object::EepromMemory { .. } => "peripheral",
             Object::Memory { .. } => "memory",
             Object::Taken => panic!("native object {object:?} is detached"),
         };
@@ -749,6 +795,7 @@ impl Backend for Simulator {
             "gpio" => self.gpio_set(object, key, value),
             "timer" => self.timer_set(object, key, value),
             "tiny" => self.tiny_set(object, key, value),
+            "peripheral" => self.peripheral_set(object, key, value),
             _ => match indexed_key(key) {
                 Some(index) => self.memory_write(object, index, value.number() as i64),
                 None => panic!("cannot set native memory key {key}"),
@@ -777,6 +824,27 @@ impl Backend for Simulator {
                 Value::Undefined
             }
             (None, "noop") => Value::Undefined,
+            (None, name) if name.starts_with("peripheral:") => {
+                let parts: Vec<_> = name.split(':').collect();
+                assert!(
+                    parts.len() == 3 || parts.len() == 5,
+                    "invalid peripheral callback identity"
+                );
+                let handle = Handle(parts[1].parse().expect("invalid peripheral handle"));
+                let args = if parts.len() == 5 {
+                    if parts[4].is_empty() {
+                        Vec::new()
+                    } else {
+                        parts[4]
+                            .split(',')
+                            .map(|n| Value::Number(n.parse().expect("invalid event argument")))
+                            .collect()
+                    }
+                } else {
+                    args
+                };
+                self.peripheral_call(runtime, handle, parts[2], args)
+            }
             (None, name) if name.starts_with("tiny-count:") => {
                 let id = name.strip_prefix("tiny-count:").unwrap();
                 self.tiny_call(
@@ -810,6 +878,7 @@ impl Backend for Simulator {
                     Object::Gpio(_) => "gpio",
                     Object::Timer(_) => "timer",
                     Object::TinyTimer(_) => "tiny",
+                    Object::Peripheral(_) | Object::EepromMemory { .. } => "peripheral",
                     Object::Memory { .. } => "memory",
                     Object::Taken => panic!("native object {handle:?} is detached"),
                 };
@@ -820,6 +889,7 @@ impl Backend for Simulator {
                     "gpio" => self.gpio_call(runtime, handle, name, args),
                     "timer" => self.timer_call(runtime, handle, name, args),
                     "tiny" => self.tiny_call(runtime, handle, name, args),
+                    "peripheral" => self.peripheral_call(runtime, handle, name, args),
                     _ => self.memory_call(handle, name, args),
                 }
             }

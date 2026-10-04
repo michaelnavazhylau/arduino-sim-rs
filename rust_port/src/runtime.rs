@@ -1,4 +1,4 @@
-//! Native Rust scenario runner and future-simulator adapter contract.
+//! Native Rust scenario runner and simulator adapter contract.
 use crate::scenario::*;
 use std::{cell::RefCell, collections::BTreeMap, rc::Rc};
 
@@ -90,7 +90,7 @@ impl Value {
     }
 }
 
-/// Implement this using the future **native Rust** simulator, never a JS bridge.
+/// Adapter boundary for the **native Rust** simulator, never a JS bridge.
 ///
 /// `resolve` supplies imported configs/enums and free functions. `construct`
 /// creates CPU/peripheral objects. Memory/register views must share state with

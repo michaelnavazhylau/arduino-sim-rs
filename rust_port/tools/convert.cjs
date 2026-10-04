@@ -142,7 +142,7 @@ for (const source of discover(sourceRoot)) {
   const moduleName = path.relative(sourceRoot, source).replace('.spec.ts','').replaceAll(/[/\\-]/g,'_');
   // Suites whose native Rust backend is implemented run by default; the rest stay
   // gated so a green `cargo test` never implies untested simulator coverage.
-  const IMPLEMENTED = new Set(['utils_assembler', 'cpu_cpu', 'cpu_interrupt', 'cpu_instruction', 'peripherals_clock', 'peripherals_gpio', 'peripherals_timer', 'peripherals_timer_attiny']);
+  const IMPLEMENTED = new Set(['utils_assembler', 'cpu_cpu', 'cpu_interrupt', 'cpu_instruction', 'peripherals_clock', 'peripherals_gpio', 'peripherals_timer', 'peripherals_timer_attiny', 'peripherals_eeprom', 'peripherals_adc', 'peripherals_spi', 'peripherals_usart', 'peripherals_twi', 'peripherals_watchdog']);
   const cases = [];
   const imports = [];
   function collect(nodes, names = [], outerSetup = [], outerHooks = []) {

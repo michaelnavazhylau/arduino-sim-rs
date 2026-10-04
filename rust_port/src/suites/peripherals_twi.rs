@@ -123,7 +123,6 @@ pub fn case_001_should_correctly_calculate_the_sclfrequency_from_twbr() -> Case 
     }
 }
 #[test]
-#[ignore = "native peripheral implementation pending"]
 fn case_001_should_correctly_calculate_the_sclfrequency_from_twbr_native() {
     crate::run_native(case_001_should_correctly_calculate_the_sclfrequency_from_twbr());
 }
@@ -181,7 +180,6 @@ pub fn case_002_should_take_the_prescaler_into_consideration_when_calculating_sc
     }
 }
 #[test]
-#[ignore = "native peripheral implementation pending"]
 fn case_002_should_take_the_prescaler_into_consideration_when_calculating_sclfrequency_native() {
     crate::run_native(
         case_002_should_take_the_prescaler_into_consideration_when_calculating_sclfrequency(),
@@ -268,7 +266,6 @@ pub fn case_003_should_trigger_data_an_interrupt_if_twint_is_set() -> Case {
     }
 }
 #[test]
-#[ignore = "native peripheral implementation pending"]
 fn case_003_should_trigger_data_an_interrupt_if_twint_is_set_native() {
     crate::run_native(case_003_should_trigger_data_an_interrupt_if_twint_is_set());
 }
@@ -343,7 +340,6 @@ pub fn case_004_should_call_the_startevent_handler_when_twsta_bit_is_written_1()
     }
 }
 #[test]
-#[ignore = "native peripheral implementation pending"]
 fn case_004_should_call_the_startevent_handler_when_twsta_bit_is_written_1_native() {
     crate::run_native(case_004_should_call_the_startevent_handler_when_twsta_bit_is_written_1());
 }
@@ -481,7 +477,6 @@ pub fn case_005_should_connect_successfully_in_case_of_repeated_start_issue_91()
     }
 }
 #[test]
-#[ignore = "native peripheral implementation pending"]
 fn case_005_should_connect_successfully_in_case_of_repeated_start_issue_91_native() {
     crate::run_native(case_005_should_connect_successfully_in_case_of_repeated_start_issue_91());
 }
@@ -821,7 +816,6 @@ pub fn case_006_should_successfully_transmit_a_byte_to_a_slave() -> Case {
     }
 }
 #[test]
-#[ignore = "native peripheral implementation pending"]
 fn case_006_should_successfully_transmit_a_byte_to_a_slave_native() {
     crate::run_native(case_006_should_successfully_transmit_a_byte_to_a_slave());
 }
@@ -1223,7 +1217,6 @@ pub fn case_007_should_successfully_receive_a_byte_from_a_slave() -> Case {
     }
 }
 #[test]
-#[ignore = "native peripheral implementation pending"]
 fn case_007_should_successfully_receive_a_byte_from_a_slave_native() {
     crate::run_native(case_007_should_successfully_receive_a_byte_from_a_slave());
 }

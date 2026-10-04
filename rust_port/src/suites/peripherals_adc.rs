@@ -243,7 +243,6 @@ pub fn case_001_should_successfuly_perform_an_adc_conversion() -> Case {
     }
 }
 #[test]
-#[ignore = "native peripheral implementation pending"]
 fn case_001_should_successfuly_perform_an_adc_conversion_native() {
     crate::run_native(case_001_should_successfuly_perform_an_adc_conversion());
 }
@@ -446,7 +445,6 @@ pub fn case_002_should_read_0_when_the_adc_peripheral_is_not_enabled() -> Case {
     }
 }
 #[test]
-#[ignore = "native peripheral implementation pending"]
 fn case_002_should_read_0_when_the_adc_peripheral_is_not_enabled_native() {
     crate::run_native(case_002_should_read_0_when_the_adc_peripheral_is_not_enabled());
 }

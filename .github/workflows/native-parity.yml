@@ -1,0 +1,33 @@
+name: Native AVR parity
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  native-parity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: rust_port/tools/package-lock.json
+      - name: Verify native suites in debug and release
+        run: bash rust_port/tools/verify-native.sh
+      - name: Install pinned conversion tooling
+        run: npm --prefix rust_port/tools ci --ignore-scripts
+      - name: Verify deterministic conversion and source hashes
+        run: npm --prefix rust_port/tools run check

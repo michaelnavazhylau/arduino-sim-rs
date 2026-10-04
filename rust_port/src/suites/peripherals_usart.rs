@@ -122,7 +122,6 @@ pub fn case_001_should_correctly_calculate_the_baudrate_from_ubrr() -> Case {
     }
 }
 #[test]
-#[ignore = "native peripheral implementation pending"]
 fn case_001_should_correctly_calculate_the_baudrate_from_ubrr_native() {
     crate::run_native(case_001_should_correctly_calculate_the_baudrate_from_ubrr());
 }
@@ -186,7 +185,6 @@ pub fn case_002_should_correctly_calculate_the_baudrate_from_ubrr_in_double_spee
     }
 }
 #[test]
-#[ignore = "native peripheral implementation pending"]
 fn case_002_should_correctly_calculate_the_baudrate_from_ubrr_in_double_speed_mode_native() {
     crate::run_native(
         case_002_should_correctly_calculate_the_baudrate_from_ubrr_in_double_speed_mode(),
@@ -299,7 +297,6 @@ pub fn case_003_should_call_onconfigurationchange_when_the_baudrate_changes() ->
     }
 }
 #[test]
-#[ignore = "native peripheral implementation pending"]
 fn case_003_should_call_onconfigurationchange_when_the_baudrate_changes_native() {
     crate::run_native(case_003_should_call_onconfigurationchange_when_the_baudrate_changes());
 }
@@ -349,7 +346,6 @@ pub fn case_004_should_return_5_bits_per_byte_when_ucsz_0() -> Case {
     }
 }
 #[test]
-#[ignore = "native peripheral implementation pending"]
 fn case_004_should_return_5_bits_per_byte_when_ucsz_0_native() {
     crate::run_native(case_004_should_return_5_bits_per_byte_when_ucsz_0());
 }
@@ -399,7 +395,6 @@ pub fn case_005_should_return_6_bits_per_byte_when_ucsz_1() -> Case {
     }
 }
 #[test]
-#[ignore = "native peripheral implementation pending"]
 fn case_005_should_return_6_bits_per_byte_when_ucsz_1_native() {
     crate::run_native(case_005_should_return_6_bits_per_byte_when_ucsz_1());
 }
@@ -449,7 +444,6 @@ pub fn case_006_should_return_7_bits_per_byte_when_ucsz_2() -> Case {
     }
 }
 #[test]
-#[ignore = "native peripheral implementation pending"]
 fn case_006_should_return_7_bits_per_byte_when_ucsz_2_native() {
     crate::run_native(case_006_should_return_7_bits_per_byte_when_ucsz_2());
 }
@@ -502,7 +496,6 @@ pub fn case_007_should_return_8_bits_per_byte_when_ucsz_3() -> Case {
     }
 }
 #[test]
-#[ignore = "native peripheral implementation pending"]
 fn case_007_should_return_8_bits_per_byte_when_ucsz_3_native() {
     crate::run_native(case_007_should_return_8_bits_per_byte_when_ucsz_3());
 }
@@ -562,7 +555,6 @@ pub fn case_008_should_return_9_bits_per_byte_when_ucsz_7() -> Case {
     }
 }
 #[test]
-#[ignore = "native peripheral implementation pending"]
 fn case_008_should_return_9_bits_per_byte_when_ucsz_7_native() {
     crate::run_native(case_008_should_return_9_bits_per_byte_when_ucsz_7());
 }
@@ -676,7 +668,6 @@ pub fn case_009_should_call_onconfigurationchange_when_bitsperchar_change() -> C
     }
 }
 #[test]
-#[ignore = "native peripheral implementation pending"]
 fn case_009_should_call_onconfigurationchange_when_bitsperchar_change_native() {
     crate::run_native(case_009_should_call_onconfigurationchange_when_bitsperchar_change());
 }
@@ -719,7 +710,6 @@ pub fn case_010_should_return_1_when_usbs_0() -> Case {
     }
 }
 #[test]
-#[ignore = "native peripheral implementation pending"]
 fn case_010_should_return_1_when_usbs_0_native() {
     crate::run_native(case_010_should_return_1_when_usbs_0());
 }
@@ -769,7 +759,6 @@ pub fn case_011_should_return_2_when_usbs_1() -> Case {
     }
 }
 #[test]
-#[ignore = "native peripheral implementation pending"]
 fn case_011_should_return_2_when_usbs_1_native() {
     crate::run_native(case_011_should_return_2_when_usbs_1());
 }
@@ -812,7 +801,6 @@ pub fn case_012_should_return_false_when_upm1_0() -> Case {
     }
 }
 #[test]
-#[ignore = "native peripheral implementation pending"]
 fn case_012_should_return_false_when_upm1_0_native() {
     crate::run_native(case_012_should_return_false_when_upm1_0());
 }
@@ -862,7 +850,6 @@ pub fn case_013_should_return_true_when_upm1_1() -> Case {
     }
 }
 #[test]
-#[ignore = "native peripheral implementation pending"]
 fn case_013_should_return_true_when_upm1_1_native() {
     crate::run_native(case_013_should_return_true_when_upm1_1());
 }
@@ -905,7 +892,6 @@ pub fn case_014_should_return_false_when_upm0_0() -> Case {
     }
 }
 #[test]
-#[ignore = "native peripheral implementation pending"]
 fn case_014_should_return_false_when_upm0_0_native() {
     crate::run_native(case_014_should_return_false_when_upm0_0());
 }
@@ -955,7 +941,6 @@ pub fn case_015_should_return_true_when_upm0_1() -> Case {
     }
 }
 #[test]
-#[ignore = "native peripheral implementation pending"]
 fn case_015_should_return_true_when_upm0_1_native() {
     crate::run_native(case_015_should_return_true_when_upm0_1());
 }
@@ -1020,7 +1005,6 @@ pub fn case_016_should_invoke_onbytetransmit_when_udr0_is_written_to() -> Case {
     }
 }
 #[test]
-#[ignore = "native peripheral implementation pending"]
 fn case_016_should_invoke_onbytetransmit_when_udr0_is_written_to_native() {
     crate::run_native(case_016_should_invoke_onbytetransmit_when_udr0_is_written_to());
 }
@@ -1087,7 +1071,6 @@ pub fn case_017_txenable_should_equal_true_when_the_transitter_is_enabled() -> C
     }
 }
 #[test]
-#[ignore = "native peripheral implementation pending"]
 fn case_017_txenable_should_equal_true_when_the_transitter_is_enabled_native() {
     crate::run_native(case_017_txenable_should_equal_true_when_the_transitter_is_enabled());
 }
@@ -1154,7 +1137,6 @@ pub fn case_018_rxenable_should_equal_true_when_the_transitter_is_enabled() -> C
     }
 }
 #[test]
-#[ignore = "native peripheral implementation pending"]
 fn case_018_rxenable_should_equal_true_when_the_transitter_is_enabled_native() {
     crate::run_native(case_018_rxenable_should_equal_true_when_the_transitter_is_enabled());
 }
@@ -1235,7 +1217,6 @@ pub fn case_019_should_trigger_data_register_empty_interrupt_if_udre_is_set() ->
     }
 }
 #[test]
-#[ignore = "native peripheral implementation pending"]
 fn case_019_should_trigger_data_register_empty_interrupt_if_udre_is_set_native() {
     crate::run_native(case_019_should_trigger_data_register_empty_interrupt_if_udre_is_set());
 }
@@ -1331,7 +1312,6 @@ pub fn case_020_should_trigger_data_tx_complete_interrupt_if_txcie_is_set() -> C
     }
 }
 #[test]
-#[ignore = "native peripheral implementation pending"]
 fn case_020_should_trigger_data_tx_complete_interrupt_if_txcie_is_set_native() {
     crate::run_native(case_020_should_trigger_data_tx_complete_interrupt_if_txcie_is_set());
 }
@@ -1399,7 +1379,6 @@ pub fn case_021_should_not_trigger_data_tx_complete_interrupt_if_udr_was_not_wri
     }
 }
 #[test]
-#[ignore = "native peripheral implementation pending"]
 fn case_021_should_not_trigger_data_tx_complete_interrupt_if_udr_was_not_written_to_native() {
     crate::run_native(
         case_021_should_not_trigger_data_tx_complete_interrupt_if_udr_was_not_written_to(),
@@ -1493,7 +1472,6 @@ pub fn case_022_should_not_trigger_any_interrupt_if_interrupts_are_disabled() ->
     }
 }
 #[test]
-#[ignore = "native peripheral implementation pending"]
 fn case_022_should_not_trigger_any_interrupt_if_interrupts_are_disabled_native() {
     crate::run_native(case_022_should_not_trigger_any_interrupt_if_interrupts_are_disabled());
 }
@@ -1594,7 +1572,6 @@ pub fn case_023_should_call_onlinetransmit_with_the_current_line_buffer_after_ev
     }
 }
 #[test]
-#[ignore = "native peripheral implementation pending"]
 fn case_023_should_call_onlinetransmit_with_the_current_line_buffer_after_every_newline_native() {
     crate::run_native(
         case_023_should_call_onlinetransmit_with_the_current_line_buffer_after_every_newline(),
@@ -1668,7 +1645,6 @@ pub fn case_024_should_not_call_onlinetransmit_if_no_newline_was_received() -> C
     }
 }
 #[test]
-#[ignore = "native peripheral implementation pending"]
 fn case_024_should_not_call_onlinetransmit_if_no_newline_was_received_native() {
     crate::run_native(case_024_should_not_call_onlinetransmit_if_no_newline_was_received());
 }
@@ -1789,7 +1765,6 @@ pub fn case_025_should_clear_the_line_buffer_after_each_call_to_onlinetransmit()
     }
 }
 #[test]
-#[ignore = "native peripheral implementation pending"]
 fn case_025_should_clear_the_line_buffer_after_each_call_to_onlinetransmit_native() {
     crate::run_native(case_025_should_clear_the_line_buffer_after_each_call_to_onlinetransmit());
 }
@@ -1865,7 +1840,6 @@ pub fn case_026_should_return_false_if_called_when_rx_is_busy() -> Case {
     }
 }
 #[test]
-#[ignore = "native peripheral implementation pending"]
 fn case_026_should_return_false_if_called_when_rx_is_busy_native() {
     crate::run_native(case_026_should_return_false_if_called_when_rx_is_busy());
 }
@@ -1961,7 +1935,6 @@ pub fn case_027_should_set_the_txc_bit_after_1_04ms_when_baud_rate_set_to_9600()
     }
 }
 #[test]
-#[ignore = "native peripheral implementation pending"]
 fn case_027_should_set_the_txc_bit_after_1_04ms_when_baud_rate_set_to_9600_native() {
     crate::run_native(case_027_should_set_the_txc_bit_after_1_04ms_when_baud_rate_set_to_9600());
 }
@@ -2138,7 +2111,6 @@ pub fn case_028_should_be_ready_to_recieve_the_next_byte_after_1_04ms_when_baudr
     }
 }
 #[test]
-#[ignore = "native peripheral implementation pending"]
 fn case_028_should_be_ready_to_recieve_the_next_byte_after_1_04ms_when_baudrate_set_to_9600_native()
 {
     crate::run_native(

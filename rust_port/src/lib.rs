@@ -1,7 +1,7 @@
 //! Behavioral tests for a native AVR simulator. No JavaScript runtime is used.
 //!
 //! The Rust scenario representation deliberately separates test behavior from the
-//! simulator's eventual ownership model. See `Backend` and the project README.
+//! simulator's evolving ownership model. See `Backend` and the project README.
 pub mod runtime;
 pub mod scenario;
 pub mod sim;

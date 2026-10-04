@@ -1,9 +1,11 @@
 # Native backend implementation contract and milestones
 
-Status: **milestones 0–5 implemented and verified**. The native backend runs
-**283 of 347 converted scenarios** by default. The remaining **64 scenarios**
-(EEPROM, ADC, SPI, USART, TWI and watchdog) remain ignored until implemented.
+Status: **milestones 0–6 implemented and verified**. All **347 converted
+scenarios** run by default with **zero ignored cases**. Including assembler,
+harness and native regressions, **392 tests pass in debug and release**.
 Official specifications are pinned locally; no JavaScript execution is used.
+Completion denotes the converted compatibility baseline, not complete source API
+parity, production adapter/core separation or hardware fidelity.
 
 ## Sources of truth
 
@@ -114,9 +116,30 @@ are an additional layer, not a replacement for those fixtures.
 - Large cycle jumps, buffered compare writes, 16-bit latches and shared hooks are
   observable in tests. Timers depend on GPIO, and Tiny Timer1 is a different
   peripheral from Mega's 16-bit Timer1.
+- EEPROM applies erase/program changes immediately, then models completion and
+  EEPE/EERIE timing with events. EEMPE expires at the four-cycle boundary. Reads
+  add four CPU cycles after the backend call; accepted writes add two cycles.
+- ADC models the source mux/reference table, differential gain, clamping and
+  left/right adjustment. The first enabled conversion takes 25 ADC cycles and
+  later conversions 13; disabled reads complete with zero. Automatic trigger,
+  data-register locking and signed differential hardware behavior are not modeled.
+- SPI completion updates SPDR/flags and releases the active transfer; colliding
+  writes set WCOL. Preserve the source's `spiMode` encoding (CPHA contributes 2,
+  CPOL contributes 1) and SPSR hook raw-write fallthrough. These are compatibility
+  choices, not corrections to hardware semantics.
+- USART invokes transmit/line callbacks before raw UDR storage, clears the line
+  only after its callback, and uses framing-dependent TX/RX completion delays.
+  RXC remains pending until UDR consumption; disabling RX drops an in-flight byte
+  at completion. Hardware framing/parity/overrun errors are not simulated.
 - TWI uses completion callbacks and implements master states; its source still
-  has `TODO: add slave states`. GPIO/SPI/USART/ADC callbacks must run at the same
-  observable points as upstream, including call-through spy instrumentation.
+  has `TODO: add slave states`. The default event handler NACKs connections/writes
+  and returns 0xff for reads. No electrical bus, arbitration or slave model exists.
+- Watchdog preserves the protected write window, WDR rescheduling and combined
+  interrupt-then-reset mode. CPU reset preserves RAM/cycles per the source;
+  existing source scheduling/flag behavior is retained, not redesigned.
+- Host callbacks run at the same tested observable points as upstream, including
+  call-through spies. A fresh callback identity is allocated per scheduled closure;
+  watchdog's named arrow callback retains stable identity.
 - The harness instruction runner's BREAK/error ordering is already implemented
   in Rust; do not bypass it with a second runner with different semantics.
 
@@ -130,12 +153,13 @@ are an additional layer, not a replacement for those fixtures.
 | 3 ✓ | Instruction decode/execute, flags, stack, extended addressing | 97 | `cargo test cpu_instruction`; cumulative 188 |
 | 4 ✓ | Clock and GPIO, external/pin-change interrupts | 30 | `cargo test peripherals_clock` and `cargo test peripherals_gpio`; cumulative 218 |
 | 5 ✓ | Mega timers and Tiny Timer1, buffered OCR, shared hooks | 65 | `cargo test peripherals_timer`; cumulative 283 |
-| 6 pending | EEPROM, ADC, SPI, USART, TWI, watchdog | 64 | Explicit ignored suites during development; final total 347 |
+| 6 ✓ | EEPROM, ADC, SPI, USART, TWI master states, watchdog | 64 | All six suites enabled after verification; cumulative 347; 20 extra peripheral/recovery tests |
 
-The first six milestones above execute real Rust code. Milestone 6 remains to
-be implemented; EEPROM and serial work may be reordered. Watchdog depends on
-the clock. Current full checks pass: `cargo fmt --check`, offline tests, strict
-Clippy and converter `--check`.
+All milestones execute real Rust code. Full checks pass: formatting, strict
+Clippy, offline debug/release tests and converter `--check`. The native parity
+gate is `bash tools/verify-native.sh` from `rust_port/`; it rejects ignored
+converted cases and runs all targets with `--include-ignored`. GitHub Actions
+adds deterministic conversion against the pinned AVR8js submodule.
 
 Each milestone should include native unit tests beyond the converted cases.
 Keep `Runtime`/`Value` in the test-adapter layer rather than making the production
@@ -160,9 +184,16 @@ behavior check must run the simulator suites, not just the green harness build.
   with no registry/port borrow held. CPU and timer state are moved temporarily
   back into the registry at synchronous host boundaries, then recovered even
   when callbacks panic. This is not an end-of-instruction notification queue.
-- Eight extra native regression tests cover ADC operand aliasing/flags, GPIO
+- Eight original native regressions cover ADC operand aliasing/flags, GPIO
   OUT ordering, CPU hook reentry, timer listener reentry, Tiny shared native/host
-  hooks and phase PWM, plus callback panic recovery.
+  hooks and phase PWM, plus callback panic recovery. Twenty new peripheral
+  regressions cover EEPROM protection/backend reentry, ADC references/differential
+  clamping/adjustment, USART masking and callback order, SPI timing reentry, TWI
+  synchronous completions, watchdog modes/WDR and all six peripherals' ownership
+  restoration after callback failures.
+- `peripheral_adapter.rs` publishes the live CPU and peripheral before resolving
+  host callbacks, without cloning native state or holding registry borrows. Native
+  fallthrough writes occur only after callbacks return, retaining source ordering.
 - The implementation still uses scenario `Value` in event/hook storage and
   config parsing. Splitting a production-only host/event interface from the
   adapter is outstanding architectural work; milestones denote implemented
@@ -194,8 +225,8 @@ coverage. Before claiming a sophisticated hardware model, add at least:
   stack overflow/underflow, and explicit compatibility-vs-strict semantics.
 - Timer large-jump equivalence, shared-register bit isolation, all WGM/prescaler
   combinations and buffering/latch rules; PLL/dead-time/async behavior if implemented.
-- Serial framing/error modes, TWI slave/arbitration/bus errors, and USI. The current
-  USI implementation has no matching upstream suite.
+- Serial framing/error modes, TWI slave/arbitration/bus errors, and USI. Upstream
+  USI has no matching suite and is not implemented in this native port.
 - SLEEP and SPM/flash programming, currently marked unimplemented in
   `cpu/instruction.ts:663–671`; their assembly tests do not prove execution.
 - Silicon-revision errata only for an explicitly selected device revision. Do not

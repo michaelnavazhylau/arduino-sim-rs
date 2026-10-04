@@ -98,7 +98,6 @@ pub fn case_001_should_return_0xff_when_reading_from_an_empty_location() -> Case
     }
 }
 #[test]
-#[ignore = "native peripheral implementation pending"]
 fn case_001_should_return_0xff_when_reading_from_an_empty_location_native() {
     crate::run_native(case_001_should_return_0xff_when_reading_from_an_empty_location());
 }
@@ -175,7 +174,6 @@ pub fn case_002_should_return_the_value_stored_at_the_given_eeprom_address() -> 
     }
 }
 #[test]
-#[ignore = "native peripheral implementation pending"]
 fn case_002_should_return_the_value_stored_at_the_given_eeprom_address_native() {
     crate::run_native(case_002_should_return_the_value_stored_at_the_given_eeprom_address());
 }
@@ -280,7 +278,6 @@ pub fn case_003_should_write_a_byte_to_the_given_eeprom_address() -> Case {
     }
 }
 #[test]
-#[ignore = "native peripheral implementation pending"]
 fn case_003_should_write_a_byte_to_the_given_eeprom_address_native() {
     crate::run_native(case_003_should_write_a_byte_to_the_given_eeprom_address());
 }
@@ -390,7 +387,6 @@ pub fn case_004_should_not_erase_the_memory_when_writing_if_eepm1_is_high() -> C
     }
 }
 #[test]
-#[ignore = "native peripheral implementation pending"]
 fn case_004_should_not_erase_the_memory_when_writing_if_eepm1_is_high_native() {
     crate::run_native(case_004_should_not_erase_the_memory_when_writing_if_eepm1_is_high());
 }
@@ -546,7 +542,6 @@ pub fn case_005_should_clear_the_eepe_bit_and_fire_an_interrupt_when_write_has_b
     }
 }
 #[test]
-#[ignore = "native peripheral implementation pending"]
 fn case_005_should_clear_the_eepe_bit_and_fire_an_interrupt_when_write_has_been_completed_native() {
     crate::run_native(
         case_005_should_clear_the_eepe_bit_and_fire_an_interrupt_when_write_has_been_completed(),
@@ -709,7 +704,6 @@ pub fn case_006_should_clear_the_fire_an_interrupt_when_there_is_a_pending_inter
     }
 }
 #[test]
-#[ignore = "native peripheral implementation pending"]
 fn case_006_should_clear_the_fire_an_interrupt_when_there_is_a_pending_interrupt_and_the_interrupt_flag_is_enabl_native(
 ) {
     crate::run_native(case_006_should_clear_the_fire_an_interrupt_when_there_is_a_pending_interrupt_and_the_interrupt_flag_is_enabl());
@@ -824,7 +818,6 @@ pub fn case_007_should_skip_the_write_if_eempe_is_clear() -> Case {
     }
 }
 #[test]
-#[ignore = "native peripheral implementation pending"]
 fn case_007_should_skip_the_write_if_eempe_is_clear_native() {
     crate::run_native(case_007_should_skip_the_write_if_eempe_is_clear());
 }
@@ -970,7 +963,6 @@ pub fn case_008_should_skip_the_write_if_another_write_is_already_in_progress() 
     }
 }
 #[test]
-#[ignore = "native peripheral implementation pending"]
 fn case_008_should_skip_the_write_if_another_write_is_already_in_progress_native() {
     crate::run_native(case_008_should_skip_the_write_if_another_write_is_already_in_progress());
 }
@@ -1125,7 +1117,6 @@ pub fn case_009_should_write_two_bytes_sucessfully() -> Case {
     }
 }
 #[test]
-#[ignore = "native peripheral implementation pending"]
 fn case_009_should_write_two_bytes_sucessfully_native() {
     crate::run_native(case_009_should_write_two_bytes_sucessfully());
 }
@@ -1230,7 +1221,6 @@ pub fn case_010_should_only_erase_the_memory_when_eepm0_is_high() -> Case {
     }
 }
 #[test]
-#[ignore = "native peripheral implementation pending"]
 fn case_010_should_only_erase_the_memory_when_eepm0_is_high_native() {
     crate::run_native(case_010_should_only_erase_the_memory_when_eepm0_is_high());
 }

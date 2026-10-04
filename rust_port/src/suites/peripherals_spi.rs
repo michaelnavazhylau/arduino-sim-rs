@@ -212,7 +212,6 @@ pub fn case_001_should_correctly_calculate_the_frequency_based_on_spcr_spst_valu
     }
 }
 #[test]
-#[ignore = "native peripheral implementation pending"]
 fn case_001_should_correctly_calculate_the_frequency_based_on_spcr_spst_values_native() {
     crate::run_native(
         case_001_should_correctly_calculate_the_frequency_based_on_spcr_spst_values(),
@@ -280,7 +279,6 @@ pub fn case_002_should_correctly_report_the_data_order_msb_lsb_first_based_on_sp
     }
 }
 #[test]
-#[ignore = "native peripheral implementation pending"]
 fn case_002_should_correctly_report_the_data_order_msb_lsb_first_based_on_spcr_value_native() {
     crate::run_native(
         case_002_should_correctly_report_the_data_order_msb_lsb_first_based_on_spcr_value(),
@@ -383,7 +381,6 @@ pub fn case_003_should_correctly_report_the_spi_mode_based_on_spcr_value() -> Ca
     }
 }
 #[test]
-#[ignore = "native peripheral implementation pending"]
 fn case_003_should_correctly_report_the_spi_mode_based_on_spcr_value_native() {
     crate::run_native(case_003_should_correctly_report_the_spi_mode_based_on_spcr_value());
 }
@@ -442,7 +439,6 @@ pub fn case_004_should_indicate_slave_master_operation_based_on_spcr_value() -> 
     }
 }
 #[test]
-#[ignore = "native peripheral implementation pending"]
 fn case_004_should_indicate_slave_master_operation_based_on_spcr_value_native() {
     crate::run_native(case_004_should_indicate_slave_master_operation_based_on_spcr_value());
 }
@@ -511,7 +507,6 @@ pub fn case_005_should_call_the_onbytetransfer_callback_when_initiating_an_spi_t
     }
 }
 #[test]
-#[ignore = "native peripheral implementation pending"]
 fn case_005_should_call_the_onbytetransfer_callback_when_initiating_an_spi_trasfer_by_writing_to_spdr_native(
 ) {
     crate::run_native(case_005_should_call_the_onbytetransfer_callback_when_initiating_an_spi_trasfer_by_writing_to_spdr());
@@ -577,7 +572,6 @@ pub fn case_006_should_ignore_spdr_writes_when_the_spe_bit_in_spcr_is_clear() ->
     }
 }
 #[test]
-#[ignore = "native peripheral implementation pending"]
 fn case_006_should_ignore_spdr_writes_when_the_spe_bit_in_spcr_is_clear_native() {
     crate::run_native(case_006_should_ignore_spdr_writes_when_the_spe_bit_in_spcr_is_clear());
 }
@@ -743,7 +737,6 @@ pub fn case_007_should_transmit_a_byte_successfully_integration() -> Case {
     }
 }
 #[test]
-#[ignore = "native peripheral implementation pending"]
 fn case_007_should_transmit_a_byte_successfully_integration_native() {
     crate::run_native(case_007_should_transmit_a_byte_successfully_integration());
 }
@@ -832,7 +825,6 @@ pub fn case_008_should_set_the_wcol_bit_in_spsr_if_writing_to_spdr_while_spi_is_
     }
 }
 #[test]
-#[ignore = "native peripheral implementation pending"]
 fn case_008_should_set_the_wcol_bit_in_spsr_if_writing_to_spdr_while_spi_is_already_transmitting_native(
 ) {
     crate::run_native(case_008_should_set_the_wcol_bit_in_spsr_if_writing_to_spdr_while_spi_is_already_transmitting());
@@ -943,7 +935,6 @@ pub fn case_009_should_clear_the_spif_bit_and_fire_an_interrupt_when_spi_transfe
     }
 }
 #[test]
-#[ignore = "native peripheral implementation pending"]
 fn case_009_should_clear_the_spif_bit_and_fire_an_interrupt_when_spi_transfer_completes_native() {
     crate::run_native(
         case_009_should_clear_the_spif_bit_and_fire_an_interrupt_when_spi_transfer_completes(),
@@ -1069,7 +1060,6 @@ pub fn case_010_should_fire_a_pending_spi_interrupt_when_spie_flag_is_set() -> C
     }
 }
 #[test]
-#[ignore = "native peripheral implementation pending"]
 fn case_010_should_fire_a_pending_spi_interrupt_when_spie_flag_is_set_native() {
     crate::run_native(case_010_should_fire_a_pending_spi_interrupt_when_spie_flag_is_set());
 }
@@ -1191,7 +1181,6 @@ pub fn case_011_should_should_only_update_spdr_when_tranfer_finishes_double_buff
     }
 }
 #[test]
-#[ignore = "native peripheral implementation pending"]
 fn case_011_should_should_only_update_spdr_when_tranfer_finishes_double_buffering_native() {
     crate::run_native(
         case_011_should_should_only_update_spdr_when_tranfer_finishes_double_buffering(),
