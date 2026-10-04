@@ -17,7 +17,10 @@ jobs:
         with:
           submodules: true
           persist-credentials: false
-      - uses: dtolnay/rust-toolchain@stable
+      # Pinned rather than @stable: a new stable release can promote clippy lints
+      # to errors and break the gate. Bump deliberately, together with any lint
+      # fixes the newer toolchain requires.
+      - uses: dtolnay/rust-toolchain@1.99.0
         with:
           components: rustfmt, clippy
       - uses: actions/setup-node@v4
