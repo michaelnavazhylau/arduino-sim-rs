@@ -35,6 +35,12 @@ pub const BOARD_WIDTH: f32 = PCB_W;
 pub const BOARD_DEPTH: f32 = PCB_D;
 
 /// Pin headers, as `(centre x, centre z, pin count)`.
+///
+/// A real Uno has **fourteen** digital pins in two blocks on one edge. Only the
+/// `D8`..`D13` block was modelled at first, which is why every earlier demo had
+/// to use a pin from that half; `D0`..`D7` sits inboard on the same edge, as it
+/// does on the board.
+const DIGITAL_LOW_HEADER: (f32, f32, usize) = (-1.00, 2.30, 8);
 const DIGITAL_HEADER: (f32, f32, usize) = (1.18, 2.30, 10);
 const ANALOG_HEADER: (f32, f32, usize) = (1.62, -2.30, 6);
 const POWER_HEADER: (f32, f32, usize) = (-1.38, -2.30, 8);
@@ -43,6 +49,8 @@ const ISP_HEADER: (f32, f32, usize) = (2.95, 0.72, 6);
 /// A pin header on the board.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Header {
+    /// `D0`..`D7`.
+    DigitalLow,
     /// `D8`..`D13`, `GND`, `AREF`, `SDA`, `SCL`.
     Digital,
     /// `A0`..`A5`.
@@ -57,6 +65,7 @@ impl Header {
     /// `(centre x, centre z, pin count)` of the header body.
     fn layout(self) -> (f32, f32, usize) {
         match self {
+            Self::DigitalLow => DIGITAL_LOW_HEADER,
             Self::Digital => DIGITAL_HEADER,
             Self::Analog => ANALOG_HEADER,
             Self::Power => POWER_HEADER,
@@ -321,8 +330,14 @@ fn board_parts() -> Vec<Part> {
         Color::new(186, 172, 122, 255),
     ));
 
-    // Headers: digital (10), analog (6), power (8), ICSP (6).
-    for header in [Header::Digital, Header::Analog, Header::Power, Header::Isp] {
+    // Headers: D0-D7 (8), D8-D13 (10), analog (6), power (8), ICSP (6).
+    for header in [
+        Header::DigitalLow,
+        Header::Digital,
+        Header::Analog,
+        Header::Power,
+        Header::Isp,
+    ] {
         let (cx, cz, pins) = header.layout();
         push_header(&mut parts, cx, cz, pins);
     }

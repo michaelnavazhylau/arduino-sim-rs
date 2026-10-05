@@ -35,9 +35,9 @@ For an existing clone, initialize the reference with
   parity gate is unaffected.
 - [`analog-solver/`](analog-solver/): independent, dependency-free nonlinear DC
   MNA solver (node voltages, signed branch currents and power).
-- [`circuit-components/`](circuit-components/): resistor and directional Shockley
-  LED models plus a declarative netlist format and part catalogue, depending only
-  on `analog-solver`; includes a headless example.
+- [`circuit-components/`](circuit-components/): resistor, directional Shockley LED
+  and switch models, plus a declarative netlist format and part catalogue,
+  depending only on `analog-solver`; includes a headless example.
 - [`breadboard/`](breadboard/): headless host, simulated-time event scheduler,
   analog pin/ADC coupling, I2C and SPI device attachment, and external components
   (an HC-SR04 ultrasonic distance sensor) wired to a real AVR board. Depends on
@@ -95,7 +95,9 @@ demo exercises the AVR core, the sensor model and the I2C bridge in one path —
 and the ranging tests run headlessly against the compiled firmware. A fourth view
 puts three indicator LEDs on a to-scale breadboard, one 330 Ω resistor each,
 where the point is that equal resistors are *not* equal currents: the solved
-forward voltages span about a volt from red to blue.
+forward voltages span about a volt from red to blue. Two more views wire the
+**same push button two ways** — to ground under the AVR's internal pull-up, and
+to 5 V with an external pull-down — so it reads opposite levels in each.
 
 See [`rust_port/README.md`](rust_port/README.md) for checks and regeneration, and
 [`rust_port/specs/backend-plan.md`](rust_port/specs/backend-plan.md) for milestones

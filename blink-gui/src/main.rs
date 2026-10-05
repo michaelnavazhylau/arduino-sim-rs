@@ -23,6 +23,7 @@
 
 mod analog;
 mod board3d;
+mod breadboard3d;
 mod camera;
 mod circuit3d;
 mod components3d;
@@ -34,6 +35,8 @@ mod sensor3d;
 mod sensor_sim;
 mod shading;
 mod sim;
+mod switch3d;
+mod switch_sim;
 mod wires3d;
 
 use board3d::Board3D;
@@ -44,6 +47,8 @@ use raylib::prelude::*;
 use sensor3d::{Sensor3D, TargetView};
 use sensor_sim::SensorSim;
 use sim::{Sim, CYCLES_PER_FRAME_1X};
+use switch3d::{Switch3D, SwitchView};
+use switch_sim::{SwitchSim, Wiring as SwitchWiring};
 
 /// Simulated clock-rate multipliers reachable with Left/Right.
 const SPEEDS: [f64; 6] = [0.25, 0.5, 1.0, 2.0, 4.0, 8.0];
@@ -65,6 +70,8 @@ enum View {
     Board,
     Sensor,
     Leds,
+    SwitchPullUp,
+    SwitchPullDown,
 }
 
 impl View {
@@ -74,6 +81,8 @@ impl View {
             Self::Board => "3D board view",
             Self::Sensor => "ultrasonic ranging",
             Self::Leds => "three indicator LEDs",
+            Self::SwitchPullUp => "switch input: simple",
+            Self::SwitchPullDown => "switch input: inverse",
         }
     }
 
@@ -83,7 +92,9 @@ impl View {
             Self::Schematic => Self::Board,
             Self::Board => Self::Sensor,
             Self::Sensor => Self::Leds,
-            Self::Leds => Self::Schematic,
+            Self::Leds => Self::SwitchPullUp,
+            Self::SwitchPullUp => Self::SwitchPullDown,
+            Self::SwitchPullDown => Self::Schematic,
         }
     }
 
@@ -96,13 +107,27 @@ impl View {
     fn is_leds(self) -> bool {
         self == Self::Leds
     }
+
+    /// Either switch-input presentation.
+    fn is_switch(self) -> bool {
+        matches!(self, Self::SwitchPullUp | Self::SwitchPullDown)
+    }
+
+    /// Which wiring the switch presentations show.
+    fn switch_wiring(self) -> Option<SwitchWiring> {
+        match self {
+            Self::SwitchPullUp => Some(SwitchWiring::PullUp),
+            Self::SwitchPullDown => Some(SwitchWiring::PullDown),
+            _ => None,
+        }
+    }
 }
 
 /// A camera framed for one presentation.
 ///
-/// The three scenes differ by an order of magnitude in extent — the ranging rig
-/// is hundreds of units long while the board is about seven — so they cannot
-/// share a framing.
+/// The scenes differ by an order of magnitude in extent — the ranging rig is
+/// hundreds of units long while the board is about seven — so they cannot share
+/// a framing.
 fn camera_for(view: View) -> OrbitCamera {
     match view {
         View::Schematic | View::Board => OrbitCamera::new(Vector3::new(0.0, 0.55, 1.0), 16.5),
@@ -111,6 +136,12 @@ fn camera_for(view: View) -> OrbitCamera {
             let (target, distance) = leds3d::frame();
             let mut camera = OrbitCamera::new(target, distance);
             // Steeper than the board view, so the breadboard layout reads.
+            camera.set_orientation(34.0, 34.0);
+            camera
+        }
+        View::SwitchPullUp | View::SwitchPullDown => {
+            let (target, distance) = switch3d::frame();
+            let mut camera = OrbitCamera::new(target, distance);
             camera.set_orientation(34.0, 34.0);
             camera
         }
@@ -132,6 +163,16 @@ fn main() {
     let sensor3d = Sensor3D::new(&mut rl, &thread);
     let leds3d = Leds3D::new(&mut rl, &thread);
     let mut leds = LedsSim::boot();
+    let switch3d = Switch3D::new(&mut rl, &thread);
+    let mut switch_up = SwitchSim::boot(SwitchWiring::PullUp);
+    let mut switch_down = SwitchSim::boot(SwitchWiring::PullDown);
+    // `SWITCH_PRESSED=1` starts with the button held, so the pressed state can be
+    // captured without a human holding a key down.
+    let start_pressed = std::env::var("SWITCH_PRESSED").as_deref() == Ok("1");
+    if start_pressed {
+        switch_up.set_pressed(true);
+        switch_down.set_pressed(true);
+    }
 
     // `SENSOR_DISTANCE_M` sets the reflector's starting position.
     let mut sensor = match std::env::var("SENSOR_DISTANCE_M")
@@ -148,6 +189,8 @@ fn main() {
         Ok("3d") | Ok("board") => View::Board,
         Ok("sensor") | Ok("ultrasonic") => View::Sensor,
         Ok("leds") | Ok("indicator") => View::Leds,
+        Ok("switch") | Ok("pullup") => View::SwitchPullUp,
+        Ok("pulldown") => View::SwitchPullDown,
         _ => View::Schematic,
     };
     let mut camera = camera_for(view);
@@ -178,11 +221,20 @@ fn main() {
                 sensor = SensorSim::boot_at(sensor.distance_m());
             } else if view.is_leds() {
                 leds = LedsSim::boot();
+            } else if view.is_switch() {
+                match view.switch_wiring() {
+                    Some(SwitchWiring::PullUp) => switch_up = SwitchSim::boot(SwitchWiring::PullUp),
+                    _ => switch_down = SwitchSim::boot(SwitchWiring::PullDown),
+                }
             } else {
                 sim = Sim::boot_with_polarity(sim.analog.reversed());
             }
         }
-        if rl.is_key_pressed(KeyboardKey::KEY_P) && !view.is_sensor() && !view.is_leds() {
+        if rl.is_key_pressed(KeyboardKey::KEY_P)
+            && !view.is_sensor()
+            && !view.is_leds()
+            && !view.is_switch()
+        {
             sim.toggle_led_polarity();
         }
         if rl.is_key_pressed(KeyboardKey::KEY_V) || rl.is_key_pressed(KeyboardKey::KEY_TAB) {
@@ -230,10 +282,26 @@ fn main() {
                 sensor.advance_micros(MICROS_PER_FRAME_1X * SPEEDS[speed]);
             } else if view.is_leds() {
                 leds.advance_micros(MICROS_PER_FRAME_1X * SPEEDS[speed]);
+            } else if view.is_switch() {
+                let micros = MICROS_PER_FRAME_1X * SPEEDS[speed];
+                match view.switch_wiring() {
+                    Some(SwitchWiring::PullUp) => switch_up.advance_micros(micros),
+                    _ => switch_down.advance_micros(micros),
+                }
             } else {
                 sim.advance((CYCLES_PER_FRAME_1X * SPEEDS[speed]) as u64);
             }
         }
+        // A momentary button wants a held key, not a toggle: the switch is only
+        // closed while the key is down, exactly like a finger on the part.
+        if view.is_switch() {
+            let held = rl.is_key_down(KeyboardKey::KEY_B) || start_pressed;
+            match view.switch_wiring() {
+                Some(SwitchWiring::PullUp) => switch_up.set_pressed(held),
+                _ => switch_down.set_pressed(held),
+            }
+        }
+
         if view != View::Schematic {
             camera.update(&rl);
         }
@@ -291,6 +359,22 @@ fn main() {
                         leds3d.draw(&mut guard, &board, &view_state)
                     });
                 }
+                View::SwitchPullUp | View::SwitchPullDown => {
+                    let sim = if view.is_switch() && view == View::SwitchPullDown {
+                        &switch_down
+                    } else {
+                        &switch_up
+                    };
+                    let view_state = SwitchView {
+                        pressed: sim.pressed(),
+                        led_brightness: sim.led_brightness(),
+                        pull_down: sim.wiring() == SwitchWiring::PullDown,
+                    };
+                    let raw = camera.raw();
+                    d.draw_mode3D(raw, |mut guard| {
+                        switch3d.draw(&mut guard, &board, &view_state)
+                    });
+                }
             }
 
             if view.is_sensor() {
@@ -305,6 +389,13 @@ fn main() {
                 );
             } else if view.is_leds() {
                 hud::draw_leds(&mut d, &leds, paused, SPEEDS[speed], width, height);
+            } else if view.is_switch() {
+                let sim = if view == View::SwitchPullDown {
+                    &switch_down
+                } else {
+                    &switch_up
+                };
+                hud::draw_switch(&mut d, sim, paused, SPEEDS[speed], width, height);
             } else {
                 hud::draw(
                     &mut d,
@@ -345,9 +436,31 @@ fn main() {
         print_sensor_summary(&sensor);
     } else if view.is_leds() {
         print_leds_summary(&leds);
+    } else if view == View::SwitchPullDown {
+        print_switch_summary(&switch_down);
+    } else if view == View::SwitchPullUp {
+        print_switch_summary(&switch_up);
     } else {
         print_blink_summary(&sim);
     }
+}
+
+fn print_switch_summary(sim: &SwitchSim) {
+    println!(
+        "switch ({:?}): {} instructions ({} cycles), {:.0} ms simulated",
+        sim.wiring(),
+        sim.instructions(),
+        sim.cycles(),
+        sim.millis()
+    );
+    println!(
+        "  button {}  pin {:.4} V  reads {:?}  LED {:+.3} mA  brightness {:.3}",
+        if sim.pressed() { "held" } else { "released" },
+        sim.button_voltage(),
+        sim.digital_level(),
+        sim.led_current() * 1e3,
+        sim.led_brightness(),
+    );
 }
 
 fn print_leds_summary(leds: &LedsSim) {

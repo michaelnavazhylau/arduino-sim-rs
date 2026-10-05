@@ -8,6 +8,7 @@
 use crate::components3d::LedPalette;
 use crate::leds_sim::LedsSim;
 use crate::sensor_sim::SensorSim;
+use crate::switch_sim::{SwitchSim, Wiring};
 use crate::{analog::SERIES_OHMS, sim::Sim};
 use breadboard::CouplingOutcome;
 use raylib::prelude::*;
@@ -438,6 +439,149 @@ pub fn draw_leds(
     // ASCII only: raylib's built-in font is CP437, so arrows and other symbols
     // outside that range render as '?'.
     let hint = "three indicator LEDs - space pause  r reboot  < > speed  v view  drag/scroll orbit";
+    d.draw_text(
+        hint,
+        (width - text_width(d, hint, 13)) / 2,
+        height - 26,
+        13,
+        HINT,
+    );
+}
+
+/// Draw a switch-input demo's overlay.
+///
+/// The two wirings share this function because the interesting content is the
+/// *comparison*: the same button and the same behaviour, read at opposite
+/// levels. Every electrical number is solved rather than computed in the
+/// overlay, so the pull-up load and the switch's insulation resistance both
+/// show up in the voltages.
+pub fn draw_switch(
+    d: &mut RaylibDrawHandle<'_>,
+    sim: &SwitchSim,
+    paused: bool,
+    speed: f64,
+    width: i32,
+    height: i32,
+) {
+    let h = height as f32;
+    let wiring = sim.wiring();
+    let pressed = sim.pressed();
+
+    d.draw_rectangle_rounded(Rectangle::new(12.0, 8.0, 700.0, 210.0), 0.04, 6, PANEL);
+    d.draw_text("Push button -> digital input -> LED", 20, 16, 22, TITLE);
+    d.draw_text(wiring.label(), 20, 44, 14, SUBTLE);
+    d.draw_text(wiring.logic(), 20, 64, 13, SUBTLE);
+
+    // What the wiring asks of the MCU, and what it should read while held.
+    d.draw_text(
+        &format!(
+            "pin mode {}   expected while held: {}",
+            if wiring.uses_internal_pullup() {
+                "INPUT_PULLUP"
+            } else {
+                "INPUT"
+            },
+            if wiring.pressed_level() {
+                "HIGH"
+            } else {
+                "LOW"
+            },
+        ),
+        20,
+        84,
+        13,
+        SUBTLE,
+    );
+
+    d.draw_text(
+        if pressed {
+            "BUTTON HELD"
+        } else {
+            "BUTTON RELEASED"
+        },
+        20,
+        108,
+        16,
+        if pressed { PAUSED } else { VALUE },
+    );
+
+    let level = match sim.digital_level() {
+        Some(true) => "HIGH",
+        Some(false) => "LOW",
+        None => "indeterminate",
+    };
+    d.draw_text(
+        &format!("pin D2   {:.4} V   reads {level}", sim.button_voltage()),
+        20,
+        132,
+        15,
+        VALUE,
+    );
+    // The LED text takes its colour from the LED's own palette, so "lit" and
+    // "dark" read the same way they do in the three-LED view.
+    let lit = sim.led_lit();
+    d.draw_text(
+        &format!(
+            "LED D9   {:.3} mA   Vf {:+.4} V   brightness {:.0}%",
+            sim.led_current() * 1e3,
+            sim.led_voltage(),
+            sim.led_brightness() * 100.0,
+        ),
+        20,
+        154,
+        15,
+        LedPalette::RED.body(if lit { 1.0 } else { 0.35 }),
+    );
+
+    // The comparison is the reason there are two of these views.
+    let other = match wiring {
+        Wiring::PullUp => "the inverse wiring would read HIGH released, LOW held",
+        Wiring::PullDown => "the simple wiring would read LOW released, HIGH held",
+    };
+    d.draw_text(other, 20, 180, 13, HINT);
+
+    if matches!(sim.outcome(), CouplingOutcome::Indeterminate(_)) {
+        d.draw_text("ANALOG: no unique operating point", 20, 196, 13, PAUSED);
+    }
+
+    // Live stats, on the right, so the breadboard on the left stays clear.
+    let panel = Rectangle::new(width as f32 - 318.0, h - 128.0, 300.0, 108.0);
+    d.draw_rectangle_rounded(panel, 0.16, 8, PANEL);
+    let x = width - 304;
+    let mut y = (h - 112.0) as i32;
+    for (label, value) in [
+        ("sim time", format!("{:.0} ms", sim.millis())),
+        ("cycles", format!("{}", sim.cycles())),
+        ("instructions", format!("{}", sim.instructions())),
+        ("dc solves", format!("{}", sim.solves())),
+    ] {
+        d.draw_text(label, x, y, 15, SUBTLE);
+        d.draw_text(&value, x + 226 - text_width(d, &value, 15), y, 15, VALUE);
+        y += 23;
+    }
+
+    let rate = format!("{speed:.2}x");
+    let rate_color = if paused { PAUSED } else { VALUE };
+    d.draw_text(
+        &rate,
+        width - 24 - text_width(d, &rate, 20),
+        20,
+        20,
+        rate_color,
+    );
+    if paused {
+        d.draw_text(
+            "PAUSED",
+            width - 24 - text_width(d, "PAUSED", 14),
+            48,
+            14,
+            PAUSED,
+        );
+    }
+
+    // ASCII only: raylib's built-in font is CP437, so '?' replaces anything
+    // outside that range.
+    let hint = "switch input - hold B to press  space pause  r reboot  < > speed  v view  drag/scroll orbit";
     d.draw_text(
         hint,
         (width - text_width(d, hint, 13)) / 2,

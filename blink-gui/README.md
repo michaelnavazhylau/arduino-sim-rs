@@ -1,6 +1,6 @@
 # blink-gui
 
-A raylib front-end for the native AVR simulator in `../rust_port`. Four views
+A raylib front-end for the native AVR simulator in `../rust_port`. Six views
 share one window: the simulator runs a **real Arduino sketch** built by
 `arduino-cli` for an ATmega328P, and raylib only observes it.
 
@@ -13,6 +13,8 @@ share one window: the simulator runs a **real Arduino sketch** built by
 * **Three indicator LEDs** — red, green and blue, one 330 Ω resistor each, on a
   breadboard. Equal resistors turn out to be a *different* operating point on
   each colour, because the forward voltages differ by about a volt.
+* **Switch inputs** — the same push button wired two ways, reading **opposite
+  levels**, each mirroring to an LED.
 
 | View | What it shows | Key |
 | --- | --- | --- |
@@ -20,6 +22,8 @@ share one window: the simulator runs a **real Arduino sketch** built by
 | **3D board** | Uno plus wired 220 Ω resistor and directional external LED | `v` / `tab` |
 | **Ultrasonic ranging** | To-scale Uno wired to an HC-SR04, a 100 mm ruler track and a target cube at the measured distance | `v` / `tab` |
 | **Three indicator LEDs** | To-scale breadboard with three 330 Ω resistor/LED columns wired to `D9`, `D10` and `D11` | `v` / `tab` |
+| **Switch: simple** | `D2` to GND with the AVR's internal pull-up; pressed reads LOW | `v` / `tab` |
+| **Switch: inverse** | `D2` to 5 V with an external 10 kΩ pull-down; pressed reads HIGH | `v` / `tab` |
 
 Both external-LED views use `Sim::analog.brightness()`. The onboard LED remains
 an independent digital GPIO indicator; reversing the external LED makes it dark
@@ -86,6 +90,30 @@ The driver's own output resistance shows up too: `Vpin` climbs from 4.798 V on
 red to 4.857 V on blue, because the 25 Ω pad droops further under the larger red
 current.
 
+### Switch inputs
+
+![Simple wiring: D2 to ground with the internal pull-up, 330 ohm resistor and LED](docs/switch-pullup.png)
+
+![Inverse wiring: D2 to 5 V with an external 10 kΩ pull-down](docs/switch-pulldown.png)
+
+The **same button, the same firmware behaviour, opposite levels**. Both are shown
+with the button held:
+
+| Wiring | Button | Pin mode | Released | Held |
+| --- | --- | --- | --- | --- |
+| simple | `D2` to GND | `INPUT_PULLUP` | 4.9985 V, HIGH | 0.0000 V, LOW |
+| inverse | `D2` to 5 V, 10 kΩ to GND | `INPUT` | 0.0005 V, LOW | 5.0000 V, HIGH |
+
+So the simple wiring needs the sketch to invert the reading and the inverse one
+does not, which is the whole reason both are worth showing side by side. The cost
+of the inverse wiring is an extra resistor, and 500 µA drawn while held instead
+of 167 µA.
+
+Those released voltages are not 5.000 V and 0.000 V, and that is deliberate: an
+open contact is 100 MΩ of insulation rather than a perfect break, so it loads the
+pull-up slightly. The tests assert the divider prediction rather than the ideal
+value.
+
 ```
   3D board view                                     Schematic view
  ┌────────────────────────────────────┐      ┌──────────────────────────────┐
@@ -150,10 +178,11 @@ blink will visibly lag.
 | Input | Action |
 | --- | --- |
 | `space` | pause / resume |
-| `r` | reset the active demo: reboot the blink sketch, keep the reflector, or restart the LED sequence |
+| `r` | reset the active demo: reboot the blink sketch, keep the reflector, restart the LED sequence, or reboot the switch sketch |
 | `p` | reverse the external LED's anode/cathode connections (blink views only) |
 | `←` / `→` (or `↑` / `↓`) | simulated clock rate, 0.25x to 8x |
-| `v` or `tab` | cycle schematic, 3D board, ultrasonic ranging and three-LED views |
+| `v` or `tab` | cycle through all six views |
+| `b` | hold to press the button (switch views only) |
 | `-` / `=` (or `[` / `]`) | move the ultrasonic target nearer / further (ranging view only) |
 | left-drag | orbit the 3D camera |
 | wheel | zoom the 3D camera |
@@ -195,7 +224,9 @@ BLINK_VIEW=schematic BLINK_FRAMES=76  BLINK_SCREENSHOT=schematic.png cargo run -
 BLINK_VIEW=sensor BLINK_FRAMES=150 SENSOR_DISTANCE_M=0.30 BLINK_SCREENSHOT=ranging.png cargo run --release
 BLINK_VIEW=sensor BLINK_FRAMES=150 SENSOR_DISTANCE_M=2.00 BLINK_SCREENSHOT=ranging-2m.png cargo run --release
 BLINK_VIEW=leds      BLINK_FRAMES=121 BLINK_SCREENSHOT=leds.png      cargo run --release
-mv board3d.png schematic.png ranging.png ranging-2m.png leds.png docs/
+BLINK_VIEW=switch    BLINK_FRAMES=40  SWITCH_PRESSED=1 BLINK_SCREENSHOT=switch-pullup.png   cargo run --release
+BLINK_VIEW=pulldown  BLINK_FRAMES=40  SWITCH_PRESSED=1 BLINK_SCREENSHOT=switch-pulldown.png cargo run --release
+mv board3d.png schematic.png ranging.png ranging-2m.png leds.png switch-pullup.png switch-pulldown.png docs/
 ```
 
 76 frames lands the blink captures at 1250 ms, which is mid-way through a lit
@@ -217,12 +248,9 @@ At 1.00x, 600 frames should report roughly 10000 ms of simulated time and about
 
 ## Firmware
 
-`firmware/blink.hex`, `firmware/ultrasonic.hex` and `firmware/leds.hex` are
-committed so the demos need no toolchain, and are embedded with `include_str!` so
-they work from any working directory. They are built from
-[`sketches/blink/blink.ino`](sketches/blink/blink.ino),
-[`sketches/ultrasonic/ultrasonic.ino`](sketches/ultrasonic/ultrasonic.ino) and
-[`sketches/leds/leds.ino`](sketches/leds/leds.ino):
+`firmware/` also holds `leds.hex`, `switch_pullup.hex` and `switch_pulldown.hex`,
+built the same way from `sketches/leds`, `sketches/switch_pullup` and
+`sketches/switch_pulldown`:
 
 ```sh
 arduino-cli compile -b arduino:avr:uno --build-path build sketches/blink
@@ -233,6 +261,12 @@ cp build/ultrasonic.ino.hex firmware/ultrasonic.hex
 
 arduino-cli compile -b arduino:avr:uno --build-path build sketches/leds
 cp build/leds.ino.hex firmware/leds.hex
+
+arduino-cli compile -b arduino:avr:uno --build-path build sketches/switch_pullup
+cp build/switch_pullup.ino.hex firmware/switch_pullup.hex
+
+arduino-cli compile -b arduino:avr:uno --build-path build sketches/switch_pulldown
+cp build/switch_pulldown.ino.hex firmware/switch_pulldown.hex
 ```
 
 Everything is loaded through `avr_port_tests::board::parse_hex`, which rejects a
@@ -468,6 +502,50 @@ Brightness is normalised at a 10 mA indicator operating point, which is why the
 same 330 Ω on a 5 V pin lands all three colours in a visible range instead of at
 the bottom of the mapping.
 
+## Switch inputs
+
+### How the switch is modelled
+
+A mechanical switch is **not a wire**, and modelling it as one would be wrong in
+both directions: a closed contact really does have resistance, and an open one
+really does insulate rather than perfectly disconnect. So both states are finite
+resistances with datasheet-style values for a tactile switch — 50 mΩ closed,
+100 MΩ open. That keeps the topology fixed, so a toggle changes one parameter
+instead of merging or splitting solver nodes.
+
+The button is therefore neither a `Stimulus` nor part of the MCU driver model. A
+switch changes the electrical network itself, so it is a netlist part whose state
+the host throws through `AnalogCoupling::set_switch`, and a toggle recompiles the
+topology because the two states differ in conductance by nine decades.
+
+### The four-legged package
+
+The [ELEGOO lesson](https://wiki.elegoo.com/oshw-getting-started-&-kits/button-switchmodule-37)
+is right that a tactile switch's four legs confuse people: legs `A`/`D` are
+internally one contact and `B`/`C` the other, which is why the jumpers land on
+opposite sides of the body and the two legs on each side are interchangeable. The
+3D model draws all four legs for exactly that reason, while the netlist part has
+the two contacts it electrically has.
+
+### What the tests check
+
+Headless, against both compiled firmwares, with no display:
+
+* the two wirings idle at opposite levels and press to opposite levels;
+* the released voltages match an **independently computed divider** that includes
+  the 100 MΩ insulation, rather than the ideal rail value;
+* the firmware mirrors the button to the LED in both wirings, at about 8 mA;
+* the pull-down wiring draws about 500 µA while held against the pull-up's
+  167 µA, which is the practical cost of the extra resistor;
+* idle frames reuse the solved topology rather than re-solving per frame.
+
+### A board fix this needed
+
+The rendered Uno was missing its `D0`–`D7` header, so every earlier demo had to
+use a pin from the `D8`–`D13` half. This demo wanted `D2`, which is what button
+tutorials use, so the inboard header is now modelled and the board shows the
+fourteen digital pins it actually has.
+
 ## Why not STL
 
 **raylib has no STL loader at all.** Its entire `LoadModel` dispatch is:
@@ -515,6 +593,9 @@ a plain `i32` in the raylib-sys 6.0 bindings rather than the enum.
 | `src/sensor3d.rs` | to-scale ranging rig: module, Uno placement, jumpers, ruler track and target |
 | `src/leds_sim.rs` | three-LED demo: netlist, analog coupling and the headless electrical tests |
 | `src/leds3d.rs` | to-scale breadboard: slab, three resistor/LED columns and the jumpers |
+| `src/switch_sim.rs` | switch-input demos: both wirings, the button state and headless tests |
+| `src/switch3d.rs` | tactile switch with a travelling stem, plus the LED chain and jumpers |
+| `src/breadboard3d.rs` | the shared half-size breadboard, its rails and contact strips |
 | `src/components3d.rs` | shared LED body, axial resistor and per-colour LED palettes |
 | `src/wires3d.rs` | cylinder/sphere segment primitives shared by all three 3D views |
 | `src/schematic.rs` | flat 2D view |
@@ -550,9 +631,12 @@ firmware headlessly and asserts on real `pulseIn` measurements, the published
 pulse-versus-distance self-consistency, no-echo handling, the proximity
 indicator and publication-gap accounting. The three-LED demo boots its firmware
 too, and checks the solved forward voltages against an independent bisection on
-the LED model plus Ohm's law across each resistor — **none of which needs a
-display**. The electrical libraries additionally check KCL/KVL, power balance, an
-independent scalar root and explicit solver error cases.
+the LED model plus Ohm's law across each resistor. The switch demos boot both of
+theirs and check the released and pressed levels against independent divider
+predictions, the inversion between the two wirings, and the current each wiring
+draws — **none of which needs a display**. The electrical libraries additionally
+check KCL/KVL, power balance, an independent scalar root and explicit solver
+error cases.
 
 ## Licence
 
