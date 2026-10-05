@@ -15,7 +15,7 @@
 //! sensor-specific parts belong to the host, and are registered here rather than
 //! hard-coded.
 
-use crate::{Led, LedParameters, Resistor};
+use crate::{Led, LedParameters, Resistor, Switch, SwitchParameters};
 use analog_solver::{BranchId, Circuit, Node, Solution, SolveError, SolveOptions};
 use std::collections::BTreeMap;
 use std::error::Error;
@@ -32,6 +32,8 @@ pub enum NetlistError {
     UnknownPart(String),
     /// The same reference designator was placed twice.
     DuplicateReference(String),
+    /// An operation named a reference designator that was never placed.
+    UnknownReference(String),
     /// A part instance left a terminal unconnected.
     MissingTerminal { reference: String, terminal: String },
     /// A connection names a terminal the part does not have.
@@ -50,6 +52,9 @@ impl fmt::Display for NetlistError {
             Self::UnknownPart(part) => write!(f, "netlist: unknown part {part:?}"),
             Self::DuplicateReference(reference) => {
                 write!(f, "netlist: duplicate reference {reference:?}")
+            }
+            Self::UnknownReference(reference) => {
+                write!(f, "netlist: no part with reference {reference:?}")
             }
             Self::MissingTerminal {
                 reference,
@@ -180,6 +185,16 @@ pub fn resistor(reference: &str, ohms: f64, p: &str, n: &str) -> PlacedPart {
         .terminal("n", n)
 }
 
+/// An open switch between two nets.
+///
+/// Toggle it by setting the `closed` parameter, either on the returned part or
+/// through [`Netlist::set_parameter`] once it is placed.
+pub fn switch(reference: &str, a: &str, b: &str) -> PlacedPart {
+    PlacedPart::new(reference, "switch", Parameters::new())
+        .terminal("a", a)
+        .terminal("b", b)
+}
+
 /// A two-terminal diode part (an LED by default) placed anode -> cathode.
 pub fn led(reference: &str, a: &str, k: &str) -> PlacedPart {
     PlacedPart::new(reference, "led", Parameters::new())
@@ -270,6 +285,33 @@ impl Netlist {
     /// Placed parts.
     pub fn parts(&self) -> &[PlacedPart] {
         &self.parts
+    }
+
+    /// Set a numeric parameter on a placed part, by reference designator.
+    ///
+    /// This is how a host toggles something like a switch without rebuilding the
+    /// description: the netlist stays the same, only one value changes.
+    pub fn set_parameter(
+        &mut self,
+        reference: &str,
+        name: &str,
+        value: f64,
+    ) -> Result<(), NetlistError> {
+        let part = self
+            .parts
+            .iter_mut()
+            .find(|part| part.reference == reference)
+            .ok_or_else(|| NetlistError::UnknownReference(reference.to_string()))?;
+        part.parameters.set(name, value);
+        Ok(())
+    }
+
+    /// A numeric parameter of a placed part, by reference designator.
+    pub fn parameter(&self, reference: &str, name: &str) -> Option<f64> {
+        self.parts
+            .iter()
+            .find(|part| part.reference == reference)
+            .and_then(|part| part.parameters.get(name))
     }
 
     /// The ground net name.
@@ -423,6 +465,7 @@ impl PartRegistry {
     pub fn standard() -> Self {
         let mut registry = Self::empty();
         registry.register(Box::new(ResistorFactory));
+        registry.register(Box::new(SwitchFactory));
         registry.register(Box::new(VoltageSourceFactory));
         registry.register(Box::new(CurrentSourceFactory));
         registry.register(Box::new(LedFactory::default()));
@@ -638,6 +681,87 @@ impl PartFactory for ResistorFactory {
 
 struct ResistorPart {
     device: Resistor,
+}
+
+/// Switch part type. The contacts are a real device with finite resistance in
+/// both states, so a toggle changes a parameter rather than the topology.
+struct SwitchFactory;
+
+impl PartFactory for SwitchFactory {
+    fn id(&self) -> &'static str {
+        "switch"
+    }
+
+    fn terminals(&self) -> &'static [&'static str] {
+        &["a", "b"]
+    }
+
+    fn build(
+        &self,
+        reference: &str,
+        parameters: &Parameters,
+    ) -> Result<Box<dyn Part>, NetlistError> {
+        let invalid = || NetlistError::InvalidParameter {
+            reference: reference.to_string(),
+        };
+        for (name, _) in parameters.iter() {
+            if !matches!(name, "closed_ohms" | "open_ohms" | "closed") {
+                return Err(invalid());
+            }
+        }
+        let base = SwitchParameters::default();
+        let device = Switch::new(SwitchParameters {
+            closed_ohms: parameters.get_or("closed_ohms", base.closed_ohms),
+            open_ohms: parameters.get_or("open_ohms", base.open_ohms),
+        })
+        .map_err(|_| invalid())?;
+        // A non-zero `closed` means the contacts are touching, so the value can
+        // come from a host writing 1.0 or 0.0 without a separate boolean type.
+        let closed = parameters.get_or("closed", 0.0) != 0.0;
+        Ok(Box::new(SwitchPart {
+            device: device.with_closed(closed),
+        }))
+    }
+}
+
+struct SwitchPart {
+    device: Switch,
+}
+
+impl Part for SwitchPart {
+    fn id(&self) -> &'static str {
+        "switch"
+    }
+
+    fn terminals(&self) -> &'static [&'static str] {
+        &["a", "b"]
+    }
+
+    fn stamp(
+        &self,
+        terminals: &[Node],
+        circuit: &mut Circuit,
+    ) -> Result<Vec<BranchId>, SolveError> {
+        Ok(vec![circuit.device(
+            terminals[0],
+            terminals[1],
+            self.device,
+        )?])
+    }
+
+    fn summary(&self) -> String {
+        let parameters = self.device.parameters();
+        format!(
+            "{} ({:.3} ohm closed, {:.1e} ohm open)",
+            if self.device.is_closed() {
+                "closed"
+            } else {
+                "open"
+            },
+            parameters.closed_ohms,
+            parameters.open_ohms,
+        )
+    }
 }
 
 impl Part for ResistorPart {

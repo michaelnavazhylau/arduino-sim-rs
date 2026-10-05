@@ -5,7 +5,7 @@
 
 use analog_solver::{Node, SolveOptions};
 use circuit_components::netlist::{
-    isource, led, resistor, vsource, Netlist, NetlistError, Parameters, Part, PartFactory,
+    isource, led, resistor, switch, vsource, Netlist, NetlistError, Parameters, Part, PartFactory,
     PartRegistry, PlacedPart,
 };
 use circuit_components::Led;
@@ -324,4 +324,63 @@ fn the_led_preset_and_its_override_are_both_available_as_data() {
     // A larger Is conducts earlier, so the drop is below the illustrative 2.14 V.
     assert!(solution.branch(diode).unwrap().voltage < 2.14);
     assert!(solution.branch(diode).unwrap().voltage > 1.5);
+}
+
+#[test]
+fn a_switch_selects_between_two_levels_without_changing_the_topology() {
+    let registry = PartRegistry::standard();
+    // A divider with a switch across the lower leg. Open, the node sits halfway;
+    // closed, the 50 mohm contact swamps the 10k leg and the node collapses.
+    let midpoint = |closed: bool| {
+        let mut netlist = Netlist::new()
+            .nets(["vcc", "mid"])
+            .part(vsource("V1", 5.0, "vcc", "gnd"))
+            .part(resistor("R1", 10_000.0, "vcc", "mid"))
+            .part(resistor("R2", 10_000.0, "mid", "gnd"))
+            .part(switch("SW1", "mid", "gnd"));
+        netlist
+            .set_parameter("SW1", "closed", if closed { 1.0 } else { 0.0 })
+            .expect("SW1 is placed");
+        let compiled = netlist.compile(&registry).expect("compiles");
+        let node = compiled.node("mid").expect("declared net");
+        compiled
+            .solve(SolveOptions {
+                current_tolerance: 1e-15,
+                ..SolveOptions::default()
+            })
+            .expect("solves")
+            .voltage(node)
+            .expect("nonground node")
+    };
+
+    let open = midpoint(false);
+    // An open switch is not a perfect disconnect: its 100 Mohm insulation sits
+    // in parallel with the lower leg, so the divider is pulled down by about
+    // 125 uV. Asserting the parallel-combination prediction checks that the
+    // insulation resistance is really in the solve rather than being treated as
+    // an ideal break.
+    let loaded = 10_000.0 * 100e6 / (10_000.0 + 100e6);
+    let predicted = 5.0 * loaded / (10_000.0 + loaded);
+    assert!(
+        (open - predicted).abs() < 1e-9,
+        "open divider at {open} V, predicted {predicted} V"
+    );
+    assert!(open < 2.5, "the open switch can only pull the node down");
+
+    let closed = midpoint(true);
+    assert!(closed < 1e-3, "closed switch left {closed} V");
+    assert!(closed > 0.0, "a closed contact cannot invert the sign");
+}
+
+#[test]
+fn setting_a_parameter_on_an_absent_part_is_reported() {
+    let mut netlist = Netlist::new()
+        .nets(["a"])
+        .part(resistor("R1", 100.0, "a", "gnd"));
+    assert_eq!(
+        netlist.set_parameter("R9", "closed", 1.0),
+        Err(NetlistError::UnknownReference("R9".into()))
+    );
+    assert_eq!(netlist.parameter("R1", "ohms"), Some(100.0));
+    assert_eq!(netlist.parameter("R1", "closed"), None);
 }

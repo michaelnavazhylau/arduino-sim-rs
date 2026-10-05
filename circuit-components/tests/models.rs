@@ -215,3 +215,63 @@ fn led_colour_presets_have_distinct_forward_voltages() {
         );
     }
 }
+
+#[test]
+fn a_switch_is_a_finite_resistance_in_both_states() {
+    let open = Switch::button();
+    let closed = Switch::button().with_closed(true);
+    assert!(!open.is_closed() && closed.is_closed());
+
+    // Open: insulation resistance, so nanoamps at 5 V.
+    let iv = open.evaluate(5.0).unwrap();
+    assert!((iv.current - 5.0 / 100e6).abs() < 1e-12, "{}", iv.current);
+    // Closed: contact resistance, so the same voltage drives 100 A if unlimited.
+    let iv = closed.evaluate(5.0).unwrap();
+    assert!((iv.current - 5.0 / 0.05).abs() < 1e-6, "{}", iv.current);
+    assert!((iv.conductance - 20.0).abs() < 1e-9);
+
+    // Ohmic and symmetric: a switch does not rectify.
+    assert!(open.evaluate(-5.0).unwrap().current < 0.0);
+    assert!(closed.evaluate(-5.0).unwrap().current < 0.0);
+    assert!(open.evaluate(0.0).unwrap().current == 0.0);
+}
+
+#[test]
+fn a_switch_rejects_physically_contradictory_parameters() {
+    for parameters in [
+        SwitchParameters {
+            closed_ohms: 100.0,
+            open_ohms: 10.0,
+        },
+        SwitchParameters {
+            closed_ohms: 0.0,
+            open_ohms: 1e6,
+        },
+        SwitchParameters {
+            closed_ohms: -1.0,
+            open_ohms: 1e6,
+        },
+        SwitchParameters {
+            closed_ohms: f64::NAN,
+            open_ohms: 1e6,
+        },
+        SwitchParameters {
+            closed_ohms: 0.05,
+            open_ohms: f64::INFINITY,
+        },
+    ] {
+        assert!(Switch::new(parameters).is_err(), "{parameters:?}");
+    }
+}
+
+#[test]
+fn toggling_a_switch_changes_conductance_not_parameters() {
+    let mut switch = Switch::button();
+    let before = switch.parameters();
+    let open_conductance = switch.evaluate(1.0).unwrap().conductance;
+    switch.set_closed(true);
+    let closed_conductance = switch.evaluate(1.0).unwrap().conductance;
+    assert_eq!(switch.parameters(), before);
+    // Nine decades of conductance between the two states.
+    assert!(closed_conductance / open_conductance > 1e9);
+}

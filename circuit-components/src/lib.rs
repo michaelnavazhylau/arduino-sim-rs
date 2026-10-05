@@ -12,8 +12,8 @@
 pub mod netlist;
 
 pub use netlist::{
-    isource, led, resistor, vsource, CompiledCircuit, Netlist, NetlistError, Parameters, Part,
-    PartFactory, PartRegistry, PlacedPart,
+    isource, led, resistor, switch, vsource, CompiledCircuit, Netlist, NetlistError, Parameters,
+    Part, PartFactory, PartRegistry, PlacedPart,
 };
 
 use analog_solver::{Device, Linearization, ModelError};
@@ -191,6 +191,114 @@ impl Device for Led {
         let conductance = exponential_current / self.scale + self.shunt_conductance;
         if !current.is_finite() || !conductance.is_finite() {
             return Err(ModelError::OutOfRange("LED exponential current"));
+        }
+        Ok(Linearization {
+            current,
+            conductance,
+        })
+    }
+}
+
+/// A mechanical switch: two contacts, either touching or apart.
+///
+/// A switch is **not a wire**, and modelling it as one would be wrong in both
+/// directions. A closed contact really does have resistance, and an open one
+/// really does insulate rather than perfectly disconnect, so both states are
+/// modelled as finite resistances with datasheet-style values for a tactile
+/// switch: a few tens of milliohms closed, and hundreds of megohms open.
+///
+/// That keeps the topology fixed, so toggling a switch never has to merge or
+/// split solver nodes. The two states differ only in conductance, which the host
+/// turns into a recompiled circuit because `Circuit` has no mutable device.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct SwitchParameters {
+    /// Contact resistance while closed, in ohms.
+    pub closed_ohms: f64,
+    /// Insulation resistance while open, in ohms.
+    pub open_ohms: f64,
+}
+
+impl Default for SwitchParameters {
+    fn default() -> Self {
+        Self {
+            // Tactile switches are typically specified at <= 100 mohm contact
+            // resistance and >= 100 Mohm insulation resistance.
+            closed_ohms: 0.05,
+            open_ohms: 100e6,
+        }
+    }
+}
+
+/// A two-state switch, memoryless in the electrical sense.
+#[derive(Clone, Copy, Debug)]
+pub struct Switch {
+    parameters: SwitchParameters,
+    closed: bool,
+    closed_conductance: f64,
+    open_conductance: f64,
+}
+
+impl Switch {
+    /// An open switch with the given contact and insulation resistances.
+    pub fn new(parameters: SwitchParameters) -> Result<Self, ModelError> {
+        positive_finite(parameters.closed_ohms, "switch contact resistance")?;
+        positive_finite(parameters.open_ohms, "switch insulation resistance")?;
+        if parameters.open_ohms <= parameters.closed_ohms {
+            return Err(ModelError::InvalidParameter(
+                "switch insulation must exceed contact resistance",
+            ));
+        }
+        let closed_conductance =
+            positive_finite(parameters.closed_ohms.recip(), "switch contact conductance")?;
+        let open_conductance = positive_finite(
+            parameters.open_ohms.recip(),
+            "switch insulation conductance",
+        )?;
+        Ok(Self {
+            parameters,
+            closed: false,
+            closed_conductance,
+            open_conductance,
+        })
+    }
+
+    /// An open tactile switch: 50 mohm closed, 100 Mohm open.
+    pub fn button() -> Self {
+        Self::new(SwitchParameters::default()).expect("valid default switch parameters")
+    }
+
+    /// Set the contact state; a chainable convenience for construction.
+    pub fn with_closed(mut self, closed: bool) -> Self {
+        self.closed = closed;
+        self
+    }
+
+    /// Open or close the contact.
+    pub fn set_closed(&mut self, closed: bool) {
+        self.closed = closed;
+    }
+
+    /// Whether the contacts are touching.
+    pub fn is_closed(&self) -> bool {
+        self.closed
+    }
+
+    /// The contact and insulation resistances.
+    pub fn parameters(&self) -> SwitchParameters {
+        self.parameters
+    }
+}
+
+impl Device for Switch {
+    fn evaluate(&self, voltage: f64) -> Result<Linearization, ModelError> {
+        let conductance = if self.closed {
+            self.closed_conductance
+        } else {
+            self.open_conductance
+        };
+        let current = voltage * conductance;
+        if !current.is_finite() {
+            return Err(ModelError::OutOfRange("switch voltage/current"));
         }
         Ok(Linearization {
             current,
