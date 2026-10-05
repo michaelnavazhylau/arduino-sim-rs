@@ -82,6 +82,48 @@ impl Default for LedParameters {
     }
 }
 
+impl LedParameters {
+    /// Illustrative indicator presets for the three common colours.
+    ///
+    /// The saturation current sets the forward voltage, and it is the dominant
+    /// difference between LED colours: it spans nine orders of magnitude between
+    /// red and blue because the band gap does. Everything else is held fixed, so
+    /// the three presets differ in exactly one physical parameter.
+    ///
+    /// These are **illustrative curves, not fitted data** for any specific part.
+    /// Real parts vary by colour bin, and the green and blue figures below are
+    /// closer to modern InGaN parts than to older GaP green.
+    ///
+    /// `nominal_current` is the 10 mA indicator operating point these presets are
+    /// normalised against, so a 330 ohm resistor on a 5 V pin lands them all in a
+    /// visible range rather than at the bottom of the brightness mapping.
+    pub fn red() -> Self {
+        Self {
+            saturation_current: 1e-20,
+            nominal_current: 0.010,
+            ..Self::default()
+        }
+    }
+
+    /// Illustrative green indicator; see [`LedParameters::red`].
+    pub fn green() -> Self {
+        Self {
+            saturation_current: 1.4e-24,
+            nominal_current: 0.010,
+            ..Self::default()
+        }
+    }
+
+    /// Illustrative blue indicator; see [`LedParameters::red`].
+    pub fn blue() -> Self {
+        Self {
+            saturation_current: 6.1e-28,
+            nominal_current: 0.010,
+            ..Self::default()
+        }
+    }
+}
+
 #[derive(Clone, Copy, Debug)]
 pub struct Led {
     parameters: LedParameters,

@@ -171,3 +171,47 @@ fn antiparallel_diodes_choose_the_forward_oriented_branch() {
         assert!(s.branch(off).unwrap().current.abs() < 6e-12);
     }
 }
+
+#[test]
+fn led_colour_presets_have_distinct_forward_voltages() {
+    // Forward voltage at the 10 mA operating point these presets are normalised
+    // to, found by bisection on the analytic model rather than restating it.
+    fn forward_voltage(parameters: LedParameters) -> f64 {
+        let led = Led::new(parameters).unwrap();
+        let (mut lo, mut hi) = (0.0_f64, 5.0_f64);
+        for _ in 0..200 {
+            let mid = 0.5 * (lo + hi);
+            if led.evaluate(mid).unwrap().current < 0.010 {
+                lo = mid;
+            } else {
+                hi = mid;
+            }
+        }
+        0.5 * (lo + hi)
+    }
+
+    let red = forward_voltage(LedParameters::red());
+    let green = forward_voltage(LedParameters::green());
+    let blue = forward_voltage(LedParameters::blue());
+    assert!(
+        red < green && green < blue,
+        "red {red}, green {green}, blue {blue}"
+    );
+    assert!((1.9..2.3).contains(&red), "red {red}");
+    assert!((2.4..2.8).contains(&green), "green {green}");
+    assert!((2.8..3.2).contains(&blue), "blue {blue}");
+
+    // The presets differ in exactly one physical parameter, so the ideality
+    // factor and thermal voltage stay identical across colours.
+    for (preset, expected) in [
+        (LedParameters::red(), 1e-20),
+        (LedParameters::green(), 1.4e-24),
+        (LedParameters::blue(), 6.1e-28),
+    ] {
+        assert_eq!(preset.saturation_current, expected);
+        assert_eq!(
+            preset.ideality_factor,
+            LedParameters::default().ideality_factor
+        );
+    }
+}

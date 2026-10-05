@@ -427,6 +427,8 @@ impl PartRegistry {
         registry.register(Box::new(CurrentSourceFactory));
         registry.register(Box::new(LedFactory::default()));
         registry.register(Box::new(LedFactory::red()));
+        registry.register(Box::new(LedFactory::green()));
+        registry.register(Box::new(LedFactory::blue()));
         registry
     }
 
@@ -664,29 +666,35 @@ impl Part for ResistorPart {
     }
 }
 
-/// LED part type. `LedFactory::default()` registers `led`; `LedFactory::red()`
-/// registers the illustrative `led.red` preset. Both accept overrides, so a
-/// calibrated part is data rather than a new type.
+/// LED part type. `LedFactory::default()` registers `led`; the colour presets
+/// register `led.red`, `led.green` and `led.blue`. All of them accept
+/// overrides, so a calibrated part is data rather than a new type.
 struct LedFactory {
     id: &'static str,
     base: LedParameters,
 }
 
 impl LedFactory {
+    fn preset(id: &'static str, base: LedParameters) -> Self {
+        Self { id, base }
+    }
+
     fn red() -> Self {
-        Self {
-            id: "led.red",
-            base: LedParameters::default(),
-        }
+        Self::preset("led.red", LedParameters::red())
+    }
+
+    fn green() -> Self {
+        Self::preset("led.green", LedParameters::green())
+    }
+
+    fn blue() -> Self {
+        Self::preset("led.blue", LedParameters::blue())
     }
 }
 
 impl Default for LedFactory {
     fn default() -> Self {
-        Self {
-            id: "led",
-            base: LedParameters::default(),
-        }
+        Self::preset("led", LedParameters::default())
     }
 }
 
