@@ -30,6 +30,55 @@ const DECK: f32 = BOARD_LIFT + PCB_H;
 /// Header pin pitch: 2.54 mm.
 const PITCH: f32 = 0.254;
 
+/// Board dimensions in model units, so another view can place and frame it.
+pub const BOARD_WIDTH: f32 = PCB_W;
+pub const BOARD_DEPTH: f32 = PCB_D;
+
+/// Pin headers, as `(centre x, centre z, pin count)`.
+const DIGITAL_HEADER: (f32, f32, usize) = (1.18, 2.30, 10);
+const ANALOG_HEADER: (f32, f32, usize) = (1.62, -2.30, 6);
+const POWER_HEADER: (f32, f32, usize) = (-1.38, -2.30, 8);
+const ISP_HEADER: (f32, f32, usize) = (2.95, 0.72, 6);
+
+/// A pin header on the board.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum Header {
+    /// `D8`..`D13`, `GND`, `AREF`, `SDA`, `SCL`.
+    Digital,
+    /// `A0`..`A5`.
+    Analog,
+    /// Power: `NC`, `IOREF`, `RESET`, `3V3`, `5V`, `GND`, `GND`, `VIN`.
+    Power,
+    /// The 2x3 ICSP header.
+    Isp,
+}
+
+impl Header {
+    /// `(centre x, centre z, pin count)` of the header body.
+    fn layout(self) -> (f32, f32, usize) {
+        match self {
+            Self::Digital => DIGITAL_HEADER,
+            Self::Analog => ANALOG_HEADER,
+            Self::Power => POWER_HEADER,
+            Self::Isp => ISP_HEADER,
+        }
+    }
+}
+
+/// Position of a header pin's tip, in board-local coordinates.
+///
+/// Exposed so another view can wire to the illustrated header rather than
+/// guessing where the pins are; add the board's own offset to get world space.
+pub fn header_pin(header: Header, index: usize) -> Vector3 {
+    let (cx, cz, pins) = header.layout();
+    assert!(
+        index < pins,
+        "header pin {index} is out of range for {pins} pins"
+    );
+    let span = (pins - 1) as f32 * PITCH;
+    Vector3::new(cx - span / 2.0 + index as f32 * PITCH, DECK + 0.37, cz)
+}
+
 /// Body colours.
 const PCB_COLOR: Color = Color::new(17, 82, 98, 255);
 const PLASTIC: Color = Color::new(30, 30, 35, 255);
@@ -119,6 +168,28 @@ impl Board3D {
         }
     }
 
+    /// Draw only the static board geometry, translated by `offset`.
+    ///
+    /// The ranging view reuses this to put the same Uno in its own scene, so the
+    /// board is never modelled twice and both views stay at one scale.
+    pub fn draw_board<D: RaylibDraw3D>(&self, d: &mut D, offset: Vector3) {
+        let spin = Vector3::new(0.0, 1.0, 0.0);
+        for part in &self.parts {
+            let model = match part.unit {
+                Unit::Cube => &self.cube,
+                Unit::Cylinder => &self.cylinder,
+            };
+            d.draw_model_ex(
+                model,
+                part.center + offset,
+                spin,
+                0.0,
+                part.scale,
+                part.color,
+            );
+        }
+    }
+
     /// Onboard indicator follows GPIO; the external LED follows solved current.
     pub fn draw<D: RaylibDraw3D>(
         &self,
@@ -132,13 +203,7 @@ impl Board3D {
         // Reference grid at y = 0; the board floats just above it.
         d.draw_grid(14, 1.0);
 
-        for part in &self.parts {
-            let model = match part.unit {
-                Unit::Cube => &self.cube,
-                Unit::Cylinder => &self.cylinder,
-            };
-            d.draw_model_ex(model, part.center, spin, 0.0, part.scale, part.color);
-        }
+        self.draw_board(d, Vector3::zero());
 
         // D13 -> 220 ohm resistor -> external LED -> GND.
         circuit3d::draw(d, &self.cylinder, &self.halo, external_brightness, reversed);
@@ -256,13 +321,11 @@ fn board_parts() -> Vec<Part> {
         Color::new(186, 172, 122, 255),
     ));
 
-    // Headers: digital (10), analog (6), power (8).
-    push_header(&mut parts, 1.18, 2.30, 10);
-    push_header(&mut parts, 1.62, -2.30, 6);
-    push_header(&mut parts, -1.38, -2.30, 8);
-
-    // ICSP header, right edge.
-    push_header(&mut parts, 2.95, 0.72, 6);
+    // Headers: digital (10), analog (6), power (8), ICSP (6).
+    for header in [Header::Digital, Header::Analog, Header::Power, Header::Isp] {
+        let (cx, cz, pins) = header.layout();
+        push_header(&mut parts, cx, cz, pins);
+    }
 
     parts
 }

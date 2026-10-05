@@ -13,6 +13,7 @@ publish = false
 avr-port-tests = { path = "../rust_port" }
 analog-solver = { path = "../analog-solver" }
 circuit-components = { path = "../circuit-components" }
+breadboard = { path = "../breadboard" }
 # `nobuild` links the system raylib instead of compiling the vendored copy with
 # cmake. See README.md for the matching linker search path.
 raylib = { version = "6.0", default-features = false, features = ["nobuild"] }

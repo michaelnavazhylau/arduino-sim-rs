@@ -27,10 +27,11 @@ would require its own device/control model and operating limits.
 | --- | --- | --- |
 | Linear MNA | Nonground node voltages, voltage-source current unknowns, ideal independent voltage/current sources, dense row-equilibrated partial-pivot elimination | Controlled sources, generalized multi-terminal stamps, reusable compiled topology |
 | Nonlinear DC | Two-terminal `Device::evaluate(V)` returning current and analytic conductance; Newton with voltage-step limiting and residual backtracking | Transistor models, warm-start API, source/gmin continuation |
-| Components | Ohmic resistor; illustrative red Shockley LED with explicit leakage shunt | Calibrated part models, capacitors, inductors, BJTs, MOSFETs, temperature evolution |
+| Components | Ohmic resistor; illustrative red Shockley LED with explicit leakage shunt; declarative [`Netlist`](../circuit-components/src/netlist.rs) with named terminals and a `PartRegistry` | Calibrated part models, capacitors, inductors, BJTs, MOSFETs, temperature evolution |
 | Diagnostics | Signed branch voltage/current/power; KCL/source-voltage residuals; singular/nonfinite/nonconvergence errors | Per-device limiting diagnostics, transient error estimates and rejection history |
-| AVR coupling | GUI-owned fixed netlist; GPIO mode sampled every 32 instructions; 5 V/0 V driver through 25 Ω, 30 kΩ pull-up; cached DC solutions | Timestamped pin events, transient synchronization, ADC electrical coupling, loaded output readback |
-| Input feedback | Valid low/high voltages feed the AVR pin; indeterminate threshold band retains the previous digital sample | Explicit board-specific threshold/hysteresis profiles and crossing-time handling |
+| AVR coupling | Netlist-driven DC coupling in [`analog.rs`](../breadboard/src/analog.rs): a Thevenin driver per bound pin, topology reuse across `Low`/`High`, solved node voltages pushed to the ADC mux channels; the GUI still owns its own fixed netlist | Timestamped pin events, transient synchronization, sample-and-hold/impedance effects, loaded output readback |
+| Input feedback | Resolved pad voltages feed `PINx` through AVR thresholds; the indeterminate band retains the previous sample; `DIDR0` is honoured | Explicit board-specific threshold/hysteresis profiles and crossing-time handling |
+| Buses | [`bus.rs`](../breadboard/src/bus.rs): I2C master with addressable Rust slaves and real ACK/NACK, plus a single SPI device; core status codes, interrupts and timing are unchanged | Multi-master arbitration, clock stretching, SPI framing/chip-select, transfers paced by real bus rates |
 
 Source of truth:
 
@@ -38,12 +39,19 @@ Source of truth:
 - [`circuit-components/src/lib.rs`](../circuit-components/src/lib.rs)
 - [`blink-gui/src/analog.rs`](../blink-gui/src/analog.rs)
 - [`blink-gui/src/sim.rs`](../blink-gui/src/sim.rs)
+- [`breadboard/src/host.rs`](../breadboard/src/host.rs) (digital external-event coupling)
+- [`breadboard/src/analog.rs`](../breadboard/src/analog.rs) (netlist ↔ pin/ADC coupling)
+- [`breadboard/src/bus.rs`](../breadboard/src/bus.rs) (I2C/SPI device attachment)
+- [`circuit-components/src/netlist.rs`](../circuit-components/src/netlist.rs)
+- [`breadboard/src/scheduler.rs`](../breadboard/src/scheduler.rs)
+- [`breadboard/src/ultrasonic.rs`](../breadboard/src/ultrasonic.rs)
 
 Existing gates:
 
 ```sh
 bash analog-solver/tools/verify-analog.sh
 bash rust_port/tools/verify-native.sh
+bash breadboard/tools/verify-breadboard.sh
 ```
 
 Keep the present forward/reverse LED, independent scalar-root, derivative,
@@ -61,9 +69,13 @@ Preserve the dependency-free AVR parity core and its offline gate:
   charges/fluxes, validated parameters, model metadata and component defaults.
   No renderer or AVR dependencies.
 - **Host/board adapter** owns MCU pin drivers, board rails, threshold/ADC rules,
-  timestamped external events and analog/digital synchronization. It currently
-  lives in `blink-gui`; extract a headless adapter crate when transient coupling
-  needs reuse. Do not move electrical dependencies into `rust_port`.
+  timestamped external events and analog/digital synchronization. It is now
+  [`breadboard/`](../breadboard/): simulated-time scheduling in AVR cycles,
+  multi-driver pin resolution, netlist-driven DC pin/ADC coupling, I2C/SPI device
+  attachment, an HC-SR04 component and a headless run loop. `blink-gui` remains
+  the GUI consumer. Transient analog coupling, board rails and measured driver
+  impedances are still unimplemented there. Do not move electrical dependencies
+  into `rust_port`.
 - **GUI** observes accepted simulation snapshots and sends configuration/input
   events. Rendering frames must not determine electrical integration steps.
 
@@ -95,6 +107,13 @@ unknowns, terminal-current residuals, their full Jacobian and dynamic charge/flu
 contributions. MOSFET gate dependence and BJT base/collector dependence require
 cross-terminal derivatives; transistor Jacobians need not be symmetric.
 Retain a two-terminal convenience adapter for existing resistors and LEDs.
+
+**Partly done:** [`netlist.rs`](../circuit-components/src/netlist.rs) already
+carries an ordered *terminal list* per part, resolves connections by terminal
+name, and lets `Part::stamp` allocate internal branch nodes (used by the host's
+`mcu.driver`). What remains is the electrical side: `analog_solver::Device` is
+still a memoryless two-terminal `I(V)` law, so a part cannot yet declare extra
+unknowns or a full cross-terminal Jacobian.
 
 Keep immutable circuit/model parameters separate from **committed analysis
 state** and **trial Newton/timestep state**. Device evaluation during Newton is
@@ -237,6 +256,18 @@ breakdown/thermal effects are visible rather than hidden.
 The current 32-instruction polling and render-frame pacing are adequate for
 Blink but cannot be the timing contract for short pulses, PWM, RC threshold
 crossings or ADC acquisition.
+
+**Digital and DC-coupling precursor (implemented).** [`breadboard/`](../breadboard/)
+provides a headless host with a simulated-time scheduler in AVR cycles, an HC-SR04
+whose ECHO transition is driven onto a real pad and observed back through `PINx`,
+a netlist-driven DC analog loop that pushes solved node voltages into the ADC mux
+channels, and I2C/SPI devices attached through the core's own callbacks. That
+covers *timestamped external events*, *event-ordered determinism*, *headless
+execution* and the *ADC electrical coupling* line item for DC. It does **not**
+cover transient analog state advance, board-specific driver impedances as
+measured data, sample-and-hold, threshold-crossing feedback with refinement,
+power/reset topology-edit policy, or transfers paced by real bus rates — so the
+milestone below remains open.
 
 - [ ] Observe GPIO mode/value changes with AVR cycle timestamps, including
   timer overrides, and align the analog solver with those event boundaries.

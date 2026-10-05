@@ -51,8 +51,18 @@ version = "0.1.0"
 dependencies = [
  "analog-solver",
  "avr-port-tests",
+ "breadboard",
  "circuit-components",
  "raylib",
+]
+
+[[package]]
+name = "breadboard"
+version = "0.1.0"
+dependencies = [
+ "analog-solver",
+ "avr-port-tests",
+ "circuit-components",
 ]
 
 [[package]]

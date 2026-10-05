@@ -1,1 +1,4 @@
 /target/
+/build/
+/shot*.png
+/sensor_*.png

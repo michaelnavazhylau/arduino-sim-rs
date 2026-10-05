@@ -6,6 +6,7 @@
 //! only renders them. External LED brightness comes from forward current, and
 //! terminal positions swap when its polarity is reversed.
 
+use crate::wires3d::{ball, tube, wire};
 use raylib::prelude::*;
 
 // The ten-position digital header is displayed as D8..D13, GND, AREF, SDA, SCL.
@@ -57,6 +58,7 @@ pub fn draw<D: RaylibDraw3D>(
             Vector3::new(-0.55, 0.52, 4.50),
             resistor_in,
         ],
+        0.045,
         RED,
     );
     wire(
@@ -68,6 +70,7 @@ pub fn draw<D: RaylibDraw3D>(
             Vector3::new(1.65, 0.52, 4.50),
             signal_terminal,
         ],
+        0.045,
         SIGNAL,
     );
     wire(
@@ -81,6 +84,7 @@ pub fn draw<D: RaylibDraw3D>(
             Vector3::new(ground.x, 0.90, PIN_Z),
             ground,
         ],
+        0.045,
         BLACK,
     );
 
@@ -167,99 +171,9 @@ pub fn led_colour(brightness: f32) -> Color {
     )
 }
 
-fn wire<D: RaylibDraw3D>(
-    d: &mut D,
-    cylinder: &Model,
-    sphere: &Model,
-    points: &[Vector3],
-    colour: Color,
-) {
-    for pair in points.windows(2) {
-        tube(d, cylinder, pair[0], pair[1], 0.045, colour);
-    }
-    for point in points {
-        ball(d, sphere, *point, 0.045, colour);
-    }
-}
-
-fn ball<D: RaylibDraw3D>(d: &mut D, sphere: &Model, position: Vector3, radius: f32, colour: Color) {
-    d.draw_model(sphere, position, radius, colour);
-}
-
-/// Rotate a +Y unit cylinder onto a segment. Generated raylib cylinders run
-/// from y=0 to y=1 (not -0.5 to +0.5), so their draw position is the start.
-fn segment_transform(start: Vector3, end: Vector3) -> Option<(Vector3, f32, f32)> {
-    let v = Vector3::new(end.x - start.x, end.y - start.y, end.z - start.z);
-    let length = (v.x * v.x + v.y * v.y + v.z * v.z).sqrt();
-    if length < 0.00001 {
-        return None;
-    }
-    // Cross product of +Y with the segment direction.
-    let mut axis = Vector3::new(v.z, 0.0, -v.x);
-    let axis_length = (axis.x * axis.x + axis.z * axis.z).sqrt();
-    if axis_length < 0.00001 {
-        axis = Vector3::new(1.0, 0.0, 0.0);
-    } else {
-        axis.x /= axis_length;
-        axis.z /= axis_length;
-    }
-    let angle = (v.y / length).clamp(-1.0, 1.0).acos().to_degrees();
-    Some((axis, angle, length))
-}
-
-fn tube<D: RaylibDraw3D>(
-    d: &mut D,
-    cylinder: &Model,
-    start: Vector3,
-    end: Vector3,
-    radius: f32,
-    colour: Color,
-) {
-    if let Some((axis, angle, length)) = segment_transform(start, end) {
-        d.draw_model_ex(
-            cylinder,
-            start,
-            axis,
-            angle,
-            Vector3::new(radius, length, radius),
-            colour,
-        );
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn cylinder_rotation_reaches_segment_endpoint() {
-        let start = Vector3::new(0.3, 0.4, 0.5);
-        for direction in [
-            Vector3::new(0.0, 2.0, 0.0),
-            Vector3::new(0.0, -2.0, 0.0),
-            Vector3::new(2.0, 0.0, 0.0),
-            Vector3::new(0.0, 0.0, -2.0),
-            Vector3::new(-1.0, 0.7, 2.0),
-        ] {
-            let end = Vector3::new(
-                start.x + direction.x,
-                start.y + direction.y,
-                start.z + direction.z,
-            );
-            let (axis, angle, length) = segment_transform(start, end).unwrap();
-            let (sin, cos) = angle.to_radians().sin_cos();
-            // Rodrigues rotation of (0,length,0), with axis.y == 0.
-            let rotated = Vector3::new(-axis.z * length * sin, length * cos, axis.x * length * sin);
-            assert!((rotated.x - direction.x).abs() < 0.0001);
-            assert!((rotated.y - direction.y).abs() < 0.0001);
-            assert!((rotated.z - direction.z).abs() < 0.0001);
-        }
-    }
-
-    #[test]
-    fn zero_length_wire_segments_are_skipped() {
-        assert!(segment_transform(Vector3::zero(), Vector3::zero()).is_none());
-    }
 
     #[test]
     fn external_led_colour_follows_current_brightness() {

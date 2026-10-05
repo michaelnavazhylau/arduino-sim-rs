@@ -2,19 +2,24 @@
 
 //! A raylib front-end for the native AVR simulator.
 //!
-//! The simulator runs a real `arduino-cli`-compiled blink sketch for an
-//! ATmega328P; raylib only observes it. Two views share one simulator state:
+//! Two demos share one window, one camera and one clock budget:
 //!
-//! * **Schematic** — the flat presentation of pin 13.
-//! * **Board** — a procedural 3D rendition of the Uno, with the pin 13 LED and
-//!   its halo driven by the simulated `PORTB5`.
+//! * **Blink** — the simulator runs a real `arduino-cli`-compiled blink sketch
+//!   for an ATmega328P; raylib only observes it. Two presentations: the flat
+//!   schematic of pin 13, and a procedural 3D rendition of the Uno whose
+//!   external LED is lit by the *solved* forward current, not `led_on`.
+//! * **Ultrasonic ranging** — the simulator runs a real HC-SR04 sketch that
+//!   pulses TRIG on D9, times ECHO on D10 with `pulseIn`, and publishes the
+//!   measurement over I2C because the simulated board has no console. The 3D
+//!   view draws the module and a target cube; the number on screen is what the
+//!   **firmware measured**.
 //!
 //! Controls: `space` pause, `r` reset, `p` reverse the external LED,
-//! `←`/`→` simulated clock rate, `v` or
-//! `tab` switch view, left-drag to orbit and the wheel to zoom in the 3D view.
+//! `←`/`→` simulated clock rate, `v` or `tab` cycle views, `-`/`=` move the
+//! ultrasonic target, left-drag to orbit and the wheel to zoom.
 //!
-//! Use `--release`. The simulator is roughly 10x slower in a debug build and the
-//! blink will visibly lag.
+//! Use `--release`. The simulator is roughly 10x slower in a debug build and
+//! both demos will visibly lag.
 
 mod analog;
 mod board3d;
@@ -22,12 +27,17 @@ mod camera;
 mod circuit3d;
 mod hud;
 mod schematic;
+mod sensor3d;
+mod sensor_sim;
 mod shading;
 mod sim;
+mod wires3d;
 
 use board3d::Board3D;
 use camera::OrbitCamera;
 use raylib::prelude::*;
+use sensor3d::{Sensor3D, TargetView};
+use sensor_sim::SensorSim;
 use sim::{Sim, CYCLES_PER_FRAME_1X};
 
 /// Simulated clock-rate multipliers reachable with Left/Right.
@@ -37,11 +47,18 @@ const DEFAULT_SPEED: usize = 2;
 const WINDOW_W: i32 = 900;
 const WINDOW_H: i32 = 600;
 
+/// Simulated microseconds per rendered frame at 1.0x: 60 fps.
+const MICROS_PER_FRAME_1X: f64 = 1_000_000.0 / 60.0;
+
+/// How far one key press moves the ultrasonic target, in metres.
+const TARGET_STEP_M: f64 = 0.1;
+
 /// Which presentation is on screen.
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum View {
     Schematic,
     Board,
+    Sensor,
 }
 
 impl View {
@@ -49,21 +66,40 @@ impl View {
         match self {
             Self::Schematic => "schematic view",
             Self::Board => "3D board view",
+            Self::Sensor => "ultrasonic ranging",
         }
     }
 
+    /// Cycle to the next presentation.
     fn toggled(self) -> Self {
         match self {
             Self::Schematic => Self::Board,
-            Self::Board => Self::Schematic,
+            Self::Board => Self::Sensor,
+            Self::Sensor => Self::Schematic,
         }
+    }
+
+    /// The demo this presentation observes.
+    fn is_sensor(self) -> bool {
+        self == Self::Sensor
+    }
+}
+
+/// A camera framed for one presentation.
+///
+/// The ranging scene is tens of units long while the board is about seven, so
+/// the two views cannot share a framing.
+fn camera_for(view: View) -> OrbitCamera {
+    match view {
+        View::Schematic | View::Board => OrbitCamera::new(Vector3::new(0.0, 0.55, 1.0), 16.5),
+        View::Sensor => OrbitCamera::new(Vector3::new(0.0, 1.2, 11.0), 30.0),
     }
 }
 
 fn main() {
     let (mut rl, thread) = raylib::init()
         .size(WINDOW_W, WINDOW_H)
-        .title("Arduino blink - native Rust AVR simulator")
+        .title("Arduino AVR simulator - blink and ultrasonic ranging")
         .build();
     rl.set_target_fps(60);
 
@@ -72,14 +108,30 @@ fn main() {
         sim.toggle_led_polarity();
     }
     let board = Board3D::new(&mut rl, &thread);
-    // Frame the PCB and the external circuit extending beyond its front edge.
-    let mut camera = OrbitCamera::new(Vector3::new(0.0, 0.55, 1.0), 16.5);
+    let sensor3d = Sensor3D::new(&mut rl, &thread);
 
-    // `BLINK_VIEW=3d` selects the 3D view at start-up, for the smoke test.
+    // `SENSOR_DISTANCE_M` sets the reflector's starting position.
+    let mut sensor = match std::env::var("SENSOR_DISTANCE_M")
+        .ok()
+        .and_then(|value| value.parse::<f64>().ok())
+    {
+        Some(distance) => SensorSim::boot_at(distance),
+        None => SensorSim::boot(),
+    };
+
+    // `BLINK_VIEW=3d` or `=sensor` selects the starting presentation, for the
+    // smoke test; anything else starts on the flat schematic.
     let mut view = match std::env::var("BLINK_VIEW").as_deref() {
         Ok("3d") | Ok("board") => View::Board,
+        Ok("sensor") | Ok("ultrasonic") => View::Sensor,
         _ => View::Schematic,
     };
+    let mut camera = camera_for(view);
+    // Distance the ranging camera is currently framed for; `None` forces a
+    // re-frame on the first frame the sensor view is on screen. It is not a
+    // NaN sentinel: every comparison against NaN is false, so the re-frame
+    // would silently never run.
+    let mut framed_distance: Option<f64> = None;
     let mut paused = false;
     let mut speed = DEFAULT_SPEED;
 
@@ -97,13 +149,20 @@ fn main() {
             paused = !paused;
         }
         if rl.is_key_pressed(KeyboardKey::KEY_R) {
-            sim = Sim::boot_with_polarity(sim.analog.reversed());
+            if view.is_sensor() {
+                // Reboot the firmware, keeping the reflector where it is.
+                sensor = SensorSim::boot_at(sensor.distance_m());
+            } else {
+                sim = Sim::boot_with_polarity(sim.analog.reversed());
+            }
         }
-        if rl.is_key_pressed(KeyboardKey::KEY_P) {
+        if rl.is_key_pressed(KeyboardKey::KEY_P) && !view.is_sensor() {
             sim.toggle_led_polarity();
         }
         if rl.is_key_pressed(KeyboardKey::KEY_V) || rl.is_key_pressed(KeyboardKey::KEY_TAB) {
             view = view.toggled();
+            framed_distance = None;
+            camera = camera_for(view);
         }
         if rl.is_key_pressed(KeyboardKey::KEY_RIGHT) || rl.is_key_pressed(KeyboardKey::KEY_UP) {
             speed = (speed + 1).min(SPEEDS.len() - 1);
@@ -111,55 +170,136 @@ fn main() {
         if rl.is_key_pressed(KeyboardKey::KEY_LEFT) || rl.is_key_pressed(KeyboardKey::KEY_DOWN) {
             speed = speed.saturating_sub(1);
         }
+        if view.is_sensor() {
+            // Both `-`/`=` and the bracket pair move the cube; the keyboard
+            // layouts differ enough that one binding is not enough.
+            let nearer = rl.is_key_pressed(KeyboardKey::KEY_MINUS)
+                || rl.is_key_pressed(KeyboardKey::KEY_LEFT_BRACKET);
+            let further = rl.is_key_pressed(KeyboardKey::KEY_EQUAL)
+                || rl.is_key_pressed(KeyboardKey::KEY_RIGHT_BRACKET);
+            if nearer {
+                sensor.set_distance_m(sensor.distance_m() - TARGET_STEP_M);
+            }
+            if further {
+                sensor.set_distance_m(sensor.distance_m() + TARGET_STEP_M);
+            }
+            // Re-frame whenever the target moves, so both a 5 cm and a 4 m
+            // reflector stay on screen. This does reset the wheel zoom.
+            if framed_distance != Some(sensor.distance_m()) {
+                let entering = framed_distance.is_none();
+                framed_distance = Some(sensor.distance_m());
+                let (target, distance) = sensor3d::frame(sensor.distance_m());
+                camera.look_at(target, distance);
+                // Only set the aspect on entry, so an orbit survives moving the
+                // target. The yaw places the camera behind the module, which
+                // puts the sensor in the foreground and the target receding.
+                if entering {
+                    camera.set_orientation(200.0, 20.0);
+                }
+            }
+        }
 
         if !paused {
-            sim.advance((CYCLES_PER_FRAME_1X * SPEEDS[speed]) as u64);
+            if view.is_sensor() {
+                sensor.advance_micros(MICROS_PER_FRAME_1X * SPEEDS[speed]);
+            } else {
+                sim.advance((CYCLES_PER_FRAME_1X * SPEEDS[speed]) as u64);
+            }
         }
-        if view == View::Board {
+        if view != View::Schematic {
             camera.update(&rl);
         }
 
         let (width, height) = (rl.get_screen_width(), rl.get_screen_height());
-        let mut d = rl.begin_drawing(&thread);
-        d.clear_background(Color::new(18, 19, 26, 255));
+        // Read the firmware's proximity indicator once per frame: it drives both
+        // the target's tint and the overlay, and it costs a pin-state query.
+        let proximity = sensor.proximity_led();
+        {
+            let mut d = rl.begin_drawing(&thread);
+            d.clear_background(Color::new(18, 19, 26, 255));
 
-        match view {
-            View::Schematic => schematic::draw(
-                &mut d,
-                width,
-                height,
-                sim.analog.brightness(),
-                sim.analog.reversed(),
-            ),
-            View::Board => {
-                // `nobuild` hides raylib-rs's camera module, so build the raw
-                // struct ourselves; see `camera.rs` for the details.
-                let raw = camera.raw();
-                d.draw_mode3D(raw, |mut guard| {
-                    board.draw(
-                        &mut guard,
-                        sim.led_on,
-                        sim.analog.brightness(),
-                        sim.analog.reversed(),
-                    )
-                });
+            match view {
+                View::Schematic => schematic::draw(
+                    &mut d,
+                    width,
+                    height,
+                    sim.analog.brightness(),
+                    sim.analog.reversed(),
+                ),
+                View::Board => {
+                    // `nobuild` hides raylib-rs's camera module, so build the raw
+                    // struct ourselves; see `camera.rs` for the details.
+                    let raw = camera.raw();
+                    d.draw_mode3D(raw, |mut guard| {
+                        board.draw(
+                            &mut guard,
+                            sim.led_on,
+                            sim.analog.brightness(),
+                            sim.analog.reversed(),
+                        )
+                    });
+                }
+                View::Sensor => {
+                    let target = TargetView {
+                        distance_m: sensor.distance_m(),
+                        measured_m: sensor.telemetry().distance_m(),
+                        echo_high: sensor.echo_high(),
+                        proximity,
+                    };
+                    let raw = camera.raw();
+                    d.draw_mode3D(raw, |mut guard| sensor3d.draw(&mut guard, &board, &target));
+                }
+            }
+
+            if view.is_sensor() {
+                hud::draw_sensor(
+                    &mut d,
+                    &sensor,
+                    proximity,
+                    paused,
+                    SPEEDS[speed],
+                    width,
+                    height,
+                );
+            } else {
+                hud::draw(
+                    &mut d,
+                    &sim,
+                    paused,
+                    SPEEDS[speed],
+                    view.label(),
+                    width,
+                    height,
+                );
             }
         }
-        hud::draw(
-            &mut d,
-            &sim,
-            paused,
-            SPEEDS[speed],
-            view.label(),
-            width,
-            height,
-        );
 
         frame += 1;
+
+        // `BLINK_SCREENSHOT=shot.png` captures the final rendered frame, which
+        // is how this 3D view is reviewed without a human at the window. It has
+        // to run *after* the draw handle closes: raylib batches 2D draws and
+        // only flushes them in `EndDrawing`, so a capture taken inside the
+        // handle would lose the whole overlay. The path is used as given, which
+        // means a relative one lands in the working directory.
+        if frame == frame_limit {
+            if let Ok(path) = std::env::var("BLINK_SCREENSHOT") {
+                rl.take_screenshot(&thread, &path);
+                println!("screenshot written: {path}");
+            }
+        }
     }
 
+    if view.is_sensor() {
+        print_sensor_summary(&sensor);
+    } else {
+        print_blink_summary(&sim);
+    }
+}
+
+fn print_blink_summary(sim: &Sim) {
     println!(
-        "executed {} instructions ({} cycles), {} LED toggles, {:.0} ms simulated",
+        "blink: executed {} instructions ({} cycles), {} LED toggles, {:.0} ms simulated",
         sim.instructions(),
         sim.cycles(),
         sim.toggles(),
@@ -176,4 +316,28 @@ fn main() {
             std::process::exit(1);
         }
     }
+}
+
+fn print_sensor_summary(sensor: &SensorSim) {
+    let telemetry = sensor.telemetry();
+    println!(
+        "ultrasonic: {} instructions ({} cycles), {:.0} ms simulated",
+        sensor.instructions(),
+        sensor.cycles(),
+        sensor.millis()
+    );
+    println!(
+        "reflector {:.3} m | firmware measured {:?} | echo {:?} us, status {}, sequence {}, {} measurements ({} missed)",
+        sensor.distance_m(),
+        telemetry.distance_m(),
+        telemetry.echo_micros,
+        telemetry.status,
+        telemetry.sequence,
+        sensor.measurements(),
+        sensor.missed_measurements(),
+    );
+    println!(
+        "sensor model last measured {:?} m",
+        sensor.model_measurement_m()
+    );
 }

@@ -18,14 +18,21 @@ For an existing clone, initialize the reference with
 
 - [`rust_port/`](rust_port/): dependency-free Rust implementation, test harness,
   generated scenarios, conversion tools and specification provenance.
-- [`blink-gui/`](blink-gui/): optional raylib GUI that runs a real blink sketch
-  on the simulator, as a flat schematic or a procedural 3D rendition of the Uno.
-  Kept outside `rust_port` so the core stays dependency-free and the offline
-  parity gate is unaffected.
+- [`blink-gui/`](blink-gui/): optional raylib GUI. It runs a real blink sketch
+  on the simulator as a flat schematic or a procedural 3D rendition of the Uno,
+  and runs a real HC-SR04 sketch in a **to-scale** (1 unit = 10 mm) 3D scene where
+  the Uno is wired to the module with jumpers and a target cube sits at the
+  distance the firmware measured. Kept outside `rust_port` so the core stays
+  dependency-free and the offline parity gate is unaffected.
 - [`analog-solver/`](analog-solver/): independent, dependency-free nonlinear DC
   MNA solver (node voltages, signed branch currents and power).
 - [`circuit-components/`](circuit-components/): resistor and directional Shockley
-  LED models, depending only on `analog-solver`; includes a headless example.
+  LED models plus a declarative netlist format and part catalogue, depending only
+  on `analog-solver`; includes a headless example.
+- [`breadboard/`](breadboard/): headless host, simulated-time event scheduler,
+  analog pin/ADC coupling, I2C and SPI device attachment, and external components
+  (an HC-SR04 ultrasonic distance sensor) wired to a real AVR board. Depends on
+  `rust_port`; nothing in the parity core depends on it.
 - [`avr8js/`](avr8js/): upstream reference submodule pinned at
   `bee6f0a94e0e27786f6bc21aee3c775849fb50fd`.
 
@@ -58,6 +65,25 @@ electrical libraries with `bash analog-solver/tools/verify-analog.sh`.
 The GUI crate links a system raylib and is
 intentionally not part of the offline CI gate; see its README for requirements,
 for why raylib cannot load STL, and for the `nobuild` camera-module caveat.
+
+[`breadboard/`](breadboard/) is the headless counterpart for **time, analog
+coupling and buses**: it owns simulated-time scheduling, external components, a
+netlist-driven analog loop that drives `PINx` and the ADC from solved node
+voltages, and I2C/SPI devices attached through the core's own callback surface.
+An HC-SR04 demonstrates a sensor whose ECHO pulse is produced at cycle
+granularity and read back through the AVR's `PINx` register; a sensor is a
+stateful device whose output depends on *when* things happened, so it implements
+a `Stimulus` rather than `analog_solver::Device`, keeping digital timing out of
+the electrical solve. The analog loop is **DC only** (no RC transients), SPI has
+no chip-select because the core does not model `SS`, and I2C is master-only.
+Verify it with `bash breadboard/tools/verify-breadboard.sh`.
+
+[`blink-gui/`](blink-gui/) shows that same sensor: the HC-SR04 sketch times ECHO
+with `pulseIn`, publishes its own result over I2C (`Wire`) to a host sink, and a
+to-scale 3D scene draws the Uno, its jumpers to the module, a 100 mm ruler track
+and a target cube at that distance. Because the firmware does the measuring, the
+demo exercises the AVR core, the sensor model and the I2C bridge in one path —
+and the ranging tests run headlessly against the compiled firmware.
 
 See [`rust_port/README.md`](rust_port/README.md) for checks and regeneration, and
 [`rust_port/specs/backend-plan.md`](rust_port/specs/backend-plan.md) for milestones

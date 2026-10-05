@@ -46,8 +46,20 @@ impl OrbitCamera {
         }
         let wheel = rl.get_mouse_wheel_move();
         if wheel != 0.0 {
-            self.distance = (self.distance * (1.0 - wheel * 0.1)).clamp(4.0, 40.0);
+            self.distance = (self.distance * (1.0 - wheel * 0.1)).clamp(4.0, 900.0);
         }
+    }
+
+    /// Re-point the camera, for a view that re-frames as its subject moves.
+    pub fn look_at(&mut self, target: Vector3, distance: f32) {
+        self.target = target;
+        self.distance = distance;
+    }
+
+    /// Set the orbit angles, for a view that wants a particular aspect.
+    pub fn set_orientation(&mut self, yaw: f32, pitch: f32) {
+        self.yaw = yaw;
+        self.pitch = pitch.clamp(3.0, 87.0);
     }
 
     /// The raw camera struct `BeginMode3D` expects.
