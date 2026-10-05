@@ -45,12 +45,58 @@ internal series resistance, aging or destruction model. Add series resistance
 as explicit branches. A real LED can be damaged by reverse bias or excess
 current; this simplified model is not a hardware safety/design validator.
 
+## Netlists
+
+The [`netlist`](src/netlist.rs) module turns a circuit **description** into a
+solver topology, so a circuit is data rather than a sequence of node allocations:
+
+```rust
+use circuit_components::netlist::{led, resistor, vsource, Netlist, PartRegistry};
+
+let netlist = Netlist::new()
+    .nets(["vcc", "d9", "led_a"])
+    .part(vsource("M1", 5.0, "vcc", "gnd"))
+    .part(resistor("M1R", 25.0, "vcc", "d9"))
+    .part(resistor("R1", 220.0, "d9", "led_a"))
+    .part(led("D1", "led_a", "gnd"));
+
+let compiled = netlist
+    .compile(&PartRegistry::standard())
+    .expect("valid netlist");
+let solution = compiled.solve(Default::default()).expect("solvable");
+let diode = compiled.branch("D1").unwrap();   // by reference designator
+let pin = compiled.node("d9").unwrap();       // by net name
+```
+
+Design points:
+
+* **Named terminals, not positions.** A resistor is `p`/`n`, an LED is `a`/`k`. A
+  connection to an undeclared net, a missing terminal, a terminal wired to two
+  nets, a duplicate reference, an unknown part or a bad parameter is rejected with
+  the offending name rather than silently defaulting.
+* **A catalogue, not a match.** Parts come from a `PartRegistry`; adding a
+  component is a new `PartFactory` plus data. `Part::stamp` may allocate internal
+  nodes, so a multi-branch part (a Thevenin source, for instance) is expressible
+  without the netlist knowing its topology.
+* **The ground net is never allocated.** The net named `gnd` *is* `Node::GROUND`,
+  so a netlist cannot float its own reference.
+* **Sources are updatable.** The first stamped branch is a part's principal
+  branch, so `compiled.circuit_mut().set_source(compiled.branch("V1").unwrap(), 3.3)`
+  changes an operating point without recompiling.
+
+The standard registry ships `resistor`, `led`, `led.red`, `vsource` and `isource`.
+`led.red` and `led` accept per-instance overrides, so a calibrated part is data
+rather than a new type; an unrecognised parameter name is an error, not a silent
+fallback to the default model.
+
 ## Roadmap
 
 The [sim2real implementation plan](../docs/sim2real-roadmap.md) covers capacitors
 and inductors, multi-terminal BJT/MOSFET models, calibrated part profiles,
 parasitics, tolerances and temperature. Those are planned extensions; the current
 crate implements only the resistor and illustrative LED models described above.
+Netlists carry a *terminal list*, so a multi-terminal part can be added without
+changing the format — but no such part exists yet.
 
 ## Headless example
 

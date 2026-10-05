@@ -5,6 +5,16 @@
 //! SI units everywhere. For both devices V = Vpositive - Vnegative and I flows
 //! positive -> negative. For an LED these terminals are anode -> cathode.
 //! The default red LED is illustrative, not a fitted model of a specific part.
+//!
+//! [`netlist`] turns a circuit description into a solver topology, so a host can
+//! add a part as data instead of hand-writing node allocations.
+
+pub mod netlist;
+
+pub use netlist::{
+    isource, led, resistor, vsource, CompiledCircuit, Netlist, NetlistError, Parameters, Part,
+    PartFactory, PartRegistry, PlacedPart,
+};
 
 use analog_solver::{Device, Linearization, ModelError};
 
