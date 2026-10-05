@@ -6,6 +6,7 @@
 //! only renders them. External LED brightness comes from forward current, and
 //! terminal positions swap when its polarity is reversed.
 
+use crate::components3d::{led_body, resistor, LedPalette, LEAD};
 use crate::wires3d::{ball, tube, wire};
 use raylib::prelude::*;
 
@@ -16,7 +17,6 @@ const HEADER_START: f32 = 1.18 - 9.0 * 0.254 / 2.0;
 const RED: Color = Color::new(220, 46, 38, 255);
 const BLACK: Color = Color::new(65, 69, 78, 255);
 const SIGNAL: Color = Color::new(235, 154, 40, 255);
-const METAL: Color = Color::new(192, 196, 206, 255);
 // Red, red, brown, gold = 22 * 10 ohm, +/- 5%.
 const BANDS: [Color; 4] = [
     RED,
@@ -24,6 +24,8 @@ const BANDS: [Color; 4] = [
     Color::new(112, 58, 26, 255),
     Color::new(218, 177, 72, 255),
 ];
+/// The part's own colours; the LED body is shared with the three-LED bank.
+const LED: LedPalette = LedPalette::RED;
 
 /// Draw the external circuit using the board's existing unit meshes.
 pub fn draw<D: RaylibDraw3D>(
@@ -89,37 +91,17 @@ pub fn draw<D: RaylibDraw3D>(
     );
 
     // Axial resistor: metal leads, tan body, and four colour bands.
-    let body_start = Vector3::new(0.0, 0.52, 4.50);
-    let body_end = Vector3::new(0.90, 0.52, 4.50);
-    tube(d, cylinder, resistor_in, body_start, 0.025, METAL);
-    tube(d, cylinder, body_end, resistor_out, 0.025, METAL);
-    tube(
-        d,
-        cylinder,
-        body_start,
-        body_end,
-        0.14,
-        Color::new(208, 184, 126, 255),
-    );
-    for (x, colour) in [0.16, 0.31, 0.46, 0.73].into_iter().zip(BANDS) {
-        tube(
-            d,
-            cylinder,
-            Vector3::new(x, 0.52, 4.50),
-            Vector3::new(x + 0.065, 0.52, 4.50),
-            0.145,
-            colour,
-        );
-    }
+    resistor(d, cylinder, resistor_in, resistor_out, 0.14, BANDS);
 
-    // Through-hole LED: two distinct leads, flange, cylindrical body and dome.
+    // Through-hole LED: leads and polarity markers live here, because they
+    // depend on the layout; the body is the shared part.
     tube(
         d,
         cylinder,
         anode,
         Vector3::new(anode.x, 1.12, anode.z),
         0.026,
-        METAL,
+        LEAD,
     );
     tube(
         d,
@@ -127,48 +109,20 @@ pub fn draw<D: RaylibDraw3D>(
         cathode,
         Vector3::new(cathode.x, 1.04, cathode.z),
         0.026,
-        METAL,
+        LEAD,
     );
     // Green terminal marker = anode; dark marker = cathode. They swap with P.
     ball(d, sphere, anode, 0.065, Color::new(90, 205, 115, 255));
     ball(d, sphere, cathode, 0.065, BLACK);
-    let colour = led_colour(brightness);
-    tube(
+    led_body(
         d,
         cylinder,
+        sphere,
         Vector3::new(2.45, 1.00, 4.50),
-        Vector3::new(2.45, 1.07, 4.50),
-        0.29,
-        colour,
+        1.0,
+        LED,
+        brightness,
     );
-    tube(
-        d,
-        cylinder,
-        Vector3::new(2.45, 1.07, 4.50),
-        Vector3::new(2.45, 1.35, 4.50),
-        0.25,
-        colour,
-    );
-    ball(d, sphere, Vector3::new(2.45, 1.35, 4.50), 0.25, colour);
-    if brightness > 0.001 {
-        ball(
-            d,
-            sphere,
-            Vector3::new(2.45, 1.28, 4.50),
-            0.48,
-            Color::new(255, 72, 35, (36.0 * brightness.clamp(0.0, 1.0)) as u8),
-        );
-    }
-}
-
-pub fn led_colour(brightness: f32) -> Color {
-    let t = brightness.clamp(0.0, 1.0);
-    Color::new(
-        (94.0 + 161.0 * t) as u8,
-        (22.0 + 70.0 * t) as u8,
-        (18.0 + 30.0 * t) as u8,
-        255,
-    )
 }
 
 #[cfg(test)]
@@ -176,11 +130,10 @@ mod tests {
     use super::*;
 
     #[test]
-    fn external_led_colour_follows_current_brightness() {
-        assert!(led_colour(1.0).r > led_colour(0.5).r);
-        assert!(led_colour(0.5).r > led_colour(0.0).r);
-        assert_eq!(led_colour(1.0).a, 255);
-        assert_eq!(led_colour(0.0).a, 255);
-        assert_eq!(led_colour(-1.0).r, led_colour(0.0).r);
+    fn the_displayed_header_places_d13_five_pitches_from_the_start() {
+        let d13 = HEADER_START + 5.0 * 0.254;
+        // D13 is the sixth pin of D8..D13, so it must sit right of centre.
+        assert!(d13 > 0.0 && d13 < PIN_Z);
+        assert!((d13 - 1.307).abs() < 1e-3, "D13 at {d13}");
     }
 }

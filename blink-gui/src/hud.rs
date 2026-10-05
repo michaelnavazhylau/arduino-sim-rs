@@ -5,8 +5,11 @@
 //! Everything here is drawn in screen space over whichever view is active, and
 //! sits on a translucent panel so it stays legible against the 3D grid.
 
+use crate::components3d::LedPalette;
+use crate::leds_sim::LedsSim;
 use crate::sensor_sim::SensorSim;
 use crate::{analog::SERIES_OHMS, sim::Sim};
+use breadboard::CouplingOutcome;
 use raylib::prelude::*;
 
 const TITLE: Color = Color::RAYWHITE;
@@ -306,6 +309,139 @@ pub fn draw_sensor(
         "track ticks every 0.1 m; taller at 0.5 m and 1 m (scene is to scale)",
         20,
         190,
+        13,
+        HINT,
+    );
+}
+
+/// Draw the three-LED demo's overlay.
+///
+/// Each row is tinted with its LED's own palette so the text lines up with the
+/// columns on screen, and every number is a solved quantity: the forward voltage
+/// and current come from the MNA operating point, not from the pin state.
+pub fn draw_leds(
+    d: &mut RaylibDrawHandle<'_>,
+    sim: &LedsSim,
+    paused: bool,
+    speed: f64,
+    width: i32,
+    height: i32,
+) {
+    let h = height as f32;
+    let readings = sim.readings();
+
+    d.draw_rectangle_rounded(Rectangle::new(12.0, 8.0, 660.0, 208.0), 0.04, 6, PANEL);
+    d.draw_text("Three indicator LEDs", 20, 16, 22, TITLE);
+    d.draw_text(
+        "firmware: arduino-cli / arduino:avr:uno - one 330 ohm resistor per channel",
+        20,
+        44,
+        14,
+        SUBTLE,
+    );
+
+    let palettes = [LedPalette::RED, LedPalette::GREEN, LedPalette::BLUE];
+    let mut y = 74;
+    for (index, (channel, reading)) in sim.channels().iter().zip(readings).enumerate() {
+        // Tinted with the LED's own lit colour, dimmed while it is dark.
+        let tint = palettes[index].body(if reading.is_lit() { 1.0 } else { 0.4 });
+        d.draw_text(channel.name, 20, y, 15, tint);
+        d.draw_text(
+            &format!(
+                "{:<3} D{:<2}   Vf {:+.4} V   If {:+.4} mA   Vpin {:+.3} V   {:.0}%",
+                channel.resistor,
+                channel.pin,
+                reading.voltage,
+                reading.current * 1e3,
+                reading.pin_voltage,
+                reading.brightness * 100.0,
+            ),
+            96,
+            y,
+            15,
+            VALUE,
+        );
+        y += 22;
+    }
+
+    d.draw_text(
+        "equal resistors, unequal currents: forward voltage spans ~1 V red to blue",
+        20,
+        y + 8,
+        13,
+        SUBTLE,
+    );
+    match sim.outcome() {
+        CouplingOutcome::Solved => {
+            d.draw_text(
+                &format!("netlist solved, {} solves", sim.solves()),
+                20,
+                y + 28,
+                13,
+                SUBTLE,
+            );
+        }
+        CouplingOutcome::Indeterminate(error) => {
+            d.draw_text(&format!("ANALOG: {error:?}"), 20, y + 28, 13, PAUSED)
+        }
+    }
+
+    // Live stats, on the right, so the breadboard on the left stays clear.
+    let panel = Rectangle::new(width as f32 - 318.0, h - 128.0, 300.0, 108.0);
+    d.draw_rectangle_rounded(panel, 0.16, 8, PANEL);
+    let x = width - 304;
+    let mut y = (h - 112.0) as i32;
+    // Which channels the firmware currently has selected, so the sequence is
+    // visible as a state and not only as light.
+    let selected: Vec<&str> = sim
+        .channels()
+        .iter()
+        .zip(readings)
+        .filter(|(_, reading)| reading.is_lit())
+        .map(|(channel, _)| channel.name)
+        .collect();
+    let selected = if selected.is_empty() {
+        "none".to_string()
+    } else {
+        selected.join("+")
+    };
+    for (label, value) in [
+        ("sim time", format!("{:.0} ms", sim.millis())),
+        ("cycles", format!("{}", sim.cycles())),
+        ("instructions", format!("{}", sim.instructions())),
+        ("selected", selected),
+    ] {
+        d.draw_text(label, x, y, 15, SUBTLE);
+        d.draw_text(&value, x + 226 - text_width(d, &value, 15), y, 15, VALUE);
+        y += 23;
+    }
+
+    let rate = format!("{speed:.2}x");
+    let rate_color = if paused { PAUSED } else { VALUE };
+    d.draw_text(
+        &rate,
+        width - 24 - text_width(d, &rate, 20),
+        20,
+        20,
+        rate_color,
+    );
+    if paused {
+        d.draw_text(
+            "PAUSED",
+            width - 24 - text_width(d, "PAUSED", 14),
+            48,
+            14,
+            PAUSED,
+        );
+    }
+
+    // ASCII only: raylib's built-in font is CP437, so arrows and other symbols
+    // outside that range render as '?'.
+    let hint = "three indicator LEDs - space pause  r reboot  < > speed  v view  drag/scroll orbit";
+    d.draw_text(
+        hint,
+        (width - text_width(d, hint, 13)) / 2,
+        height - 26,
         13,
         HINT,
     );

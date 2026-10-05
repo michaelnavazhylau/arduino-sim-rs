@@ -27,10 +27,12 @@ For an existing clone, initialize the reference with
   generated scenarios, conversion tools and specification provenance.
 - [`blink-gui/`](blink-gui/): optional raylib GUI. It runs a real blink sketch
   on the simulator as a flat schematic or a procedural 3D rendition of the Uno,
-  and runs a real HC-SR04 sketch in a **to-scale** (1 unit = 10 mm) 3D scene where
-  the Uno is wired to the module with jumpers and a target cube sits at the
-  distance the firmware measured. Kept outside `rust_port` so the core stays
-  dependency-free and the offline parity gate is unaffected.
+  runs a real HC-SR04 sketch in a **to-scale** (1 unit = 10 mm) 3D scene where the
+  Uno is wired to the module with jumpers and a target cube sits at the distance
+  the firmware measured, and runs a three-LED breadboard demo where equal 330 Ω
+  resistors turn out to be a different operating point on red, green and blue.
+  Kept outside `rust_port` so the core stays dependency-free and the offline
+  parity gate is unaffected.
 - [`analog-solver/`](analog-solver/): independent, dependency-free nonlinear DC
   MNA solver (node voltages, signed branch currents and power).
 - [`circuit-components/`](circuit-components/): resistor and directional Shockley
@@ -90,7 +92,10 @@ with `pulseIn`, publishes its own result over I2C (`Wire`) to a host sink, and a
 to-scale 3D scene draws the Uno, its jumpers to the module, a 100 mm ruler track
 and a target cube at that distance. Because the firmware does the measuring, the
 demo exercises the AVR core, the sensor model and the I2C bridge in one path —
-and the ranging tests run headlessly against the compiled firmware.
+and the ranging tests run headlessly against the compiled firmware. A fourth view
+puts three indicator LEDs on a to-scale breadboard, one 330 Ω resistor each,
+where the point is that equal resistors are *not* equal currents: the solved
+forward voltages span about a volt from red to blue.
 
 See [`rust_port/README.md`](rust_port/README.md) for checks and regeneration, and
 [`rust_port/specs/backend-plan.md`](rust_port/specs/backend-plan.md) for milestones

@@ -5,7 +5,7 @@
 //! Layout is derived from the live window size so the view stays centred
 //! whatever the window is resized to.
 
-use crate::circuit3d::led_colour;
+use crate::components3d::LedPalette;
 use raylib::prelude::*;
 
 /// Body colours.
@@ -39,7 +39,7 @@ pub fn draw<D: RaylibDraw>(d: &mut D, width: i32, height: i32, brightness: f32, 
             Color::new(255, 86, 48, (58.0 * brightness) as u8),
         );
     }
-    d.draw_circle(cx, cy, 40.0, led_colour(brightness));
+    d.draw_circle(cx, cy, 40.0, LedPalette::RED.body(brightness));
 
     // ASCII only: the built-in font is CP437. The middle dot happens to be in
     // that set, but arrows are not.

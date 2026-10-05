@@ -1,6 +1,6 @@
 # blink-gui
 
-A raylib front-end for the native AVR simulator in `../rust_port`. Two demos
+A raylib front-end for the native AVR simulator in `../rust_port`. Four views
 share one window: the simulator runs a **real Arduino sketch** built by
 `arduino-cli` for an ATmega328P, and raylib only observes it.
 
@@ -10,12 +10,16 @@ share one window: the simulator runs a **real Arduino sketch** built by
   reports its measurement over I2C. The 3D view is **to scale** (1 unit = 10 mm)
   and shows the Uno, the jumpers and the module, with a target cube at the
   distance the **firmware measured**.
+* **Three indicator LEDs** — red, green and blue, one 330 Ω resistor each, on a
+  breadboard. Equal resistors turn out to be a *different* operating point on
+  each colour, because the forward voltages differ by about a volt.
 
 | View | What it shows | Key |
 | --- | --- | --- |
 | **Schematic** | Flat external LED, lit by solved forward current | `v` / `tab` |
 | **3D board** | Uno plus wired 220 Ω resistor and directional external LED | `v` / `tab` |
 | **Ultrasonic ranging** | To-scale Uno wired to an HC-SR04, a 100 mm ruler track and a target cube at the measured distance | `v` / `tab` |
+| **Three indicator LEDs** | To-scale breadboard with three 330 Ω resistor/LED columns wired to `D9`, `D10` and `D11` | `v` / `tab` |
 
 Both external-LED views use `Sim::analog.brightness()`. The onboard LED remains
 an independent digital GPIO indicator; reversing the external LED makes it dark
@@ -58,6 +62,29 @@ The same scene with the target at 2 m shows why the scale is worth keeping:
 The whole rig is a few pixels across, because 2 m really is 200 times the
 module's 10 mm features. That is the honest picture, not a framing bug — see
 [the model limits](#model-limits).
+
+### Three indicator LEDs
+
+![To-scale breadboard with red, green and blue LEDs, each behind a 330 ohm resistor](docs/leds.png)
+
+Red, green and blue, one 330 Ω resistor each, on a half-size breadboard wired to
+`D9`, `D10` and `D11`. The overlay compares the three operating points side by
+side, and the finding is that **equal resistors are not equal currents**:
+
+| Colour | Forward voltage | Forward current | Brightness |
+| --- | --- | --- | --- |
+| red | 2.1318 V | 8.0795 mA | 81% |
+| green | 2.5817 V | 6.8121 mA | 68% |
+| blue | 2.9727 V | 5.7108 mA | 57% |
+
+Those are solved quantities, not nominal ones. The 330 Ω part is the same in all
+three columns; what differs is the LED, whose forward voltage spans about a volt
+across the colours. That is why real designs often pick a different resistor per
+colour instead of reusing one value.
+
+The driver's own output resistance shows up too: `Vpin` climbs from 4.798 V on
+red to 4.857 V on blue, because the 25 Ω pad droops further under the larger red
+current.
 
 ```
   3D board view                                     Schematic view
@@ -123,11 +150,11 @@ blink will visibly lag.
 | Input | Action |
 | --- | --- |
 | `space` | pause / resume |
-| `r` | reset the board (blink) or reboot the firmware keeping the reflector (ranging) |
+| `r` | reset the active demo: reboot the blink sketch, keep the reflector, or restart the LED sequence |
 | `p` | reverse the external LED's anode/cathode connections (blink views only) |
 | `←` / `→` (or `↑` / `↓`) | simulated clock rate, 0.25x to 8x |
-| `v` or `tab` | cycle schematic, 3D board and ultrasonic ranging |
-| `-` / `=` (or `[` / `]`) | move the ultrasonic target nearer / further |
+| `v` or `tab` | cycle schematic, 3D board, ultrasonic ranging and three-LED views |
+| `-` / `=` (or `[` / `]`) | move the ultrasonic target nearer / further (ranging view only) |
 | left-drag | orbit the 3D camera |
 | wheel | zoom the 3D camera |
 
@@ -167,7 +194,8 @@ BLINK_VIEW=3d        BLINK_FRAMES=76  BLINK_SCREENSHOT=board3d.png  cargo run --
 BLINK_VIEW=schematic BLINK_FRAMES=76  BLINK_SCREENSHOT=schematic.png cargo run --release
 BLINK_VIEW=sensor BLINK_FRAMES=150 SENSOR_DISTANCE_M=0.30 BLINK_SCREENSHOT=ranging.png cargo run --release
 BLINK_VIEW=sensor BLINK_FRAMES=150 SENSOR_DISTANCE_M=2.00 BLINK_SCREENSHOT=ranging-2m.png cargo run --release
-mv board3d.png schematic.png ranging.png ranging-2m.png docs/
+BLINK_VIEW=leds      BLINK_FRAMES=121 BLINK_SCREENSHOT=leds.png      cargo run --release
+mv board3d.png schematic.png ranging.png ranging-2m.png leds.png docs/
 ```
 
 76 frames lands the blink captures at 1250 ms, which is mid-way through a lit
@@ -189,10 +217,12 @@ At 1.00x, 600 frames should report roughly 10000 ms of simulated time and about
 
 ## Firmware
 
-`firmware/blink.hex` and `firmware/ultrasonic.hex` are committed so the demos need
-no toolchain, and are embedded with `include_str!` so they work from any working
-directory. They are built from [`sketches/blink/blink.ino`](sketches/blink/blink.ino)
-and [`sketches/ultrasonic/ultrasonic.ino`](sketches/ultrasonic/ultrasonic.ino):
+`firmware/blink.hex`, `firmware/ultrasonic.hex` and `firmware/leds.hex` are
+committed so the demos need no toolchain, and are embedded with `include_str!` so
+they work from any working directory. They are built from
+[`sketches/blink/blink.ino`](sketches/blink/blink.ino),
+[`sketches/ultrasonic/ultrasonic.ino`](sketches/ultrasonic/ultrasonic.ino) and
+[`sketches/leds/leds.ino`](sketches/leds/leds.ino):
 
 ```sh
 arduino-cli compile -b arduino:avr:uno --build-path build sketches/blink
@@ -200,6 +230,9 @@ cp build/blink.ino.hex firmware/blink.hex
 
 arduino-cli compile -b arduino:avr:uno --build-path build sketches/ultrasonic
 cp build/ultrasonic.ino.hex firmware/ultrasonic.hex
+
+arduino-cli compile -b arduino:avr:uno --build-path build sketches/leds
+cp build/leds.ino.hex firmware/leds.hex
 ```
 
 Everything is loaded through `avr_port_tests::board::parse_hex`, which rejects a
@@ -381,6 +414,60 @@ there is no arbitration or clock stretching. The 343 m/s constant is a textbook
 value rather than a calibration, and nothing here is a substitute for measuring
 a real module.
 
+## The three-LED demo
+
+### Why equal resistors are worth showing
+
+Three LEDs, one 330 Ω resistor each, sharing one 5 V supply. Intuitively the
+currents should match; they do not, because an LED's forward voltage is set by
+its band gap and red, green and blue differ by roughly a volt:
+
+| Colour | Preset saturation current | Forward voltage at 10 mA |
+| --- | --- | --- |
+| red | 1e-20 A | ≈ 2.14 V |
+| green | 1.4e-24 A | ≈ 2.58 V |
+| blue | 6.1e-28 A | ≈ 2.97 V |
+
+The three presets differ in **exactly one physical parameter**. The ideality
+factor, thermal voltage and shunt resistance are identical across colours, so the
+forward-voltage difference is entirely attributable to the saturation current.
+These are illustrative curves, **not fitted data** for any particular part; real
+parts vary by colour bin, and the green and blue figures are closer to modern
+InGaN parts than to older GaP green.
+
+### Netlist and coupling
+
+The circuit is described as data and driven through `breadboard`'s
+`AnalogCoupling`, so this demo exercises the netlist and coupling layers rather
+than a hand-written netlist:
+
+```text
+D9  -> R1 330 -> D1 led.red   -> GND
+D10 -> R2 330 -> D2 led.green -> GND
+D11 -> R3 330 -> D3 led.blue  -> GND
+```
+
+Each pin contributes a Thevenin driver for its current mode, the three branches
+solve together in one MNA system, and the brightness on screen comes from the
+**solved** forward current — an LED on a pin the firmware drove high still looks
+dark if its branch carries no current.
+
+### What the tests check
+
+Headless, against the compiled firmware, with no display:
+
+* the forward voltages order red < green < blue and differ by more than 0.5 V;
+* the currents order the other way, because the resistor is the same;
+* every operating point satisfies Ohm's law across its own resistor to 1e-6 A;
+* each solved forward voltage matches an **independent bisection** on the LED
+  model at that current, so the test does not restate the solver's arithmetic;
+* the firmware's sequence is red, then green, then blue, then all three, then
+  dark, and it repeats exactly one cycle period later.
+
+Brightness is normalised at a 10 mA indicator operating point, which is why the
+same 330 Ω on a 5 V pin lands all three colours in a visible range instead of at
+the bottom of the mapping.
+
 ## Why not STL
 
 **raylib has no STL loader at all.** Its entire `LoadModel` dispatch is:
@@ -426,7 +513,10 @@ a plain `i32` in the raylib-sys 6.0 bindings rather than the enum.
 | `src/circuit3d.rs` | jumper wires, banded resistor, current-lit LED and polarity markers |
 | `src/sensor_sim.rs` | ultrasonic demo: firmware boot, HC-SR04, I2C telemetry readback |
 | `src/sensor3d.rs` | to-scale ranging rig: module, Uno placement, jumpers, ruler track and target |
-| `src/wires3d.rs` | cylinder/sphere segment primitives shared by both 3D views |
+| `src/leds_sim.rs` | three-LED demo: netlist, analog coupling and the headless electrical tests |
+| `src/leds3d.rs` | to-scale breadboard: slab, three resistor/LED columns and the jumpers |
+| `src/components3d.rs` | shared LED body, axial resistor and per-colour LED palettes |
+| `src/wires3d.rs` | cylinder/sphere segment primitives shared by all three 3D views |
 | `src/schematic.rs` | flat 2D view |
 | `src/hud.rs` | stats overlay and control hint, shared by both views |
 | `src/shading.rs` | the diffuse shader |
@@ -458,8 +548,10 @@ forward/reverse current, input/pull-up thresholds, polarity changes while paused
 and solution caching. The ranging demo additionally boots its own compiled
 firmware headlessly and asserts on real `pulseIn` measurements, the published
 pulse-versus-distance self-consistency, no-echo handling, the proximity
-indicator and publication-gap accounting — **none of which needs a display**.
-The electrical libraries additionally check KCL/KVL, power balance, an
+indicator and publication-gap accounting. The three-LED demo boots its firmware
+too, and checks the solved forward voltages against an independent bisection on
+the LED model plus Ohm's law across each resistor — **none of which needs a
+display**. The electrical libraries additionally check KCL/KVL, power balance, an
 independent scalar root and explicit solver error cases.
 
 ## Licence

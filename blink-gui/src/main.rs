@@ -25,7 +25,10 @@ mod analog;
 mod board3d;
 mod camera;
 mod circuit3d;
+mod components3d;
 mod hud;
+mod leds3d;
+mod leds_sim;
 mod schematic;
 mod sensor3d;
 mod sensor_sim;
@@ -35,6 +38,8 @@ mod wires3d;
 
 use board3d::Board3D;
 use camera::OrbitCamera;
+use leds3d::{LedView, Leds3D};
+use leds_sim::LedsSim;
 use raylib::prelude::*;
 use sensor3d::{Sensor3D, TargetView};
 use sensor_sim::SensorSim;
@@ -59,6 +64,7 @@ enum View {
     Schematic,
     Board,
     Sensor,
+    Leds,
 }
 
 impl View {
@@ -67,6 +73,7 @@ impl View {
             Self::Schematic => "schematic view",
             Self::Board => "3D board view",
             Self::Sensor => "ultrasonic ranging",
+            Self::Leds => "three indicator LEDs",
         }
     }
 
@@ -75,31 +82,45 @@ impl View {
         match self {
             Self::Schematic => Self::Board,
             Self::Board => Self::Sensor,
-            Self::Sensor => Self::Schematic,
+            Self::Sensor => Self::Leds,
+            Self::Leds => Self::Schematic,
         }
     }
 
-    /// The demo this presentation observes.
+    /// The ultrasonic presentation, which has its own sim and controls.
     fn is_sensor(self) -> bool {
         self == Self::Sensor
+    }
+
+    /// The three-LED presentation.
+    fn is_leds(self) -> bool {
+        self == Self::Leds
     }
 }
 
 /// A camera framed for one presentation.
 ///
-/// The ranging scene is tens of units long while the board is about seven, so
-/// the two views cannot share a framing.
+/// The three scenes differ by an order of magnitude in extent — the ranging rig
+/// is hundreds of units long while the board is about seven — so they cannot
+/// share a framing.
 fn camera_for(view: View) -> OrbitCamera {
     match view {
         View::Schematic | View::Board => OrbitCamera::new(Vector3::new(0.0, 0.55, 1.0), 16.5),
         View::Sensor => OrbitCamera::new(Vector3::new(0.0, 1.2, 11.0), 30.0),
+        View::Leds => {
+            let (target, distance) = leds3d::frame();
+            let mut camera = OrbitCamera::new(target, distance);
+            // Steeper than the board view, so the breadboard layout reads.
+            camera.set_orientation(34.0, 34.0);
+            camera
+        }
     }
 }
 
 fn main() {
     let (mut rl, thread) = raylib::init()
         .size(WINDOW_W, WINDOW_H)
-        .title("Arduino AVR simulator - blink and ultrasonic ranging")
+        .title("Arduino AVR simulator - blink, ranging and indicator LEDs")
         .build();
     rl.set_target_fps(60);
 
@@ -109,6 +130,8 @@ fn main() {
     }
     let board = Board3D::new(&mut rl, &thread);
     let sensor3d = Sensor3D::new(&mut rl, &thread);
+    let leds3d = Leds3D::new(&mut rl, &thread);
+    let mut leds = LedsSim::boot();
 
     // `SENSOR_DISTANCE_M` sets the reflector's starting position.
     let mut sensor = match std::env::var("SENSOR_DISTANCE_M")
@@ -119,11 +142,12 @@ fn main() {
         None => SensorSim::boot(),
     };
 
-    // `BLINK_VIEW=3d` or `=sensor` selects the starting presentation, for the
-    // smoke test; anything else starts on the flat schematic.
+    // `BLINK_VIEW=3d`, `=sensor` or `=leds` selects the starting presentation,
+    // for the smoke test; anything else starts on the flat schematic.
     let mut view = match std::env::var("BLINK_VIEW").as_deref() {
         Ok("3d") | Ok("board") => View::Board,
         Ok("sensor") | Ok("ultrasonic") => View::Sensor,
+        Ok("leds") | Ok("indicator") => View::Leds,
         _ => View::Schematic,
     };
     let mut camera = camera_for(view);
@@ -152,11 +176,13 @@ fn main() {
             if view.is_sensor() {
                 // Reboot the firmware, keeping the reflector where it is.
                 sensor = SensorSim::boot_at(sensor.distance_m());
+            } else if view.is_leds() {
+                leds = LedsSim::boot();
             } else {
                 sim = Sim::boot_with_polarity(sim.analog.reversed());
             }
         }
-        if rl.is_key_pressed(KeyboardKey::KEY_P) && !view.is_sensor() {
+        if rl.is_key_pressed(KeyboardKey::KEY_P) && !view.is_sensor() && !view.is_leds() {
             sim.toggle_led_polarity();
         }
         if rl.is_key_pressed(KeyboardKey::KEY_V) || rl.is_key_pressed(KeyboardKey::KEY_TAB) {
@@ -202,6 +228,8 @@ fn main() {
         if !paused {
             if view.is_sensor() {
                 sensor.advance_micros(MICROS_PER_FRAME_1X * SPEEDS[speed]);
+            } else if view.is_leds() {
+                leds.advance_micros(MICROS_PER_FRAME_1X * SPEEDS[speed]);
             } else {
                 sim.advance((CYCLES_PER_FRAME_1X * SPEEDS[speed]) as u64);
             }
@@ -249,6 +277,20 @@ fn main() {
                     let raw = camera.raw();
                     d.draw_mode3D(raw, |mut guard| sensor3d.draw(&mut guard, &board, &target));
                 }
+                View::Leds => {
+                    let readings = leds.readings();
+                    let view_state = LedView {
+                        brightness: [
+                            readings[0].brightness,
+                            readings[1].brightness,
+                            readings[2].brightness,
+                        ],
+                    };
+                    let raw = camera.raw();
+                    d.draw_mode3D(raw, |mut guard| {
+                        leds3d.draw(&mut guard, &board, &view_state)
+                    });
+                }
             }
 
             if view.is_sensor() {
@@ -261,6 +303,8 @@ fn main() {
                     width,
                     height,
                 );
+            } else if view.is_leds() {
+                hud::draw_leds(&mut d, &leds, paused, SPEEDS[speed], width, height);
             } else {
                 hud::draw(
                     &mut d,
@@ -299,8 +343,30 @@ fn main() {
 
     if view.is_sensor() {
         print_sensor_summary(&sensor);
+    } else if view.is_leds() {
+        print_leds_summary(&leds);
     } else {
         print_blink_summary(&sim);
+    }
+}
+
+fn print_leds_summary(leds: &LedsSim) {
+    println!(
+        "leds: {} instructions ({} cycles), {:.0} ms simulated, {:.1} firmware cycles",
+        leds.instructions(),
+        leds.cycles(),
+        leds.millis(),
+        leds.millis() / leds_sim::CYCLE_MS
+    );
+    for (channel, reading) in leds.channels().iter().zip(leds.readings()) {
+        println!(
+            "  {:<5} Vf {:+.4} V  If {:+.4} mA  Vpin {:+.4} V  brightness {:.3}",
+            channel.name,
+            reading.voltage,
+            reading.current * 1e3,
+            reading.pin_voltage,
+            reading.brightness,
+        );
     }
 }
 
