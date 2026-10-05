@@ -21,6 +21,44 @@ Both external-LED views use `Sim::analog.brightness()`. The onboard LED remains
 an independent digital GPIO indicator; reversing the external LED makes it dark
 without changing firmware or the onboard indicator.
 
+## Screenshots
+
+All three views at 1.00x. Every number in these panels is produced by the
+simulation: the blink readout is a solved nonlinear DC operating point, and the
+ranging readout is the value the firmware measured and published over I2C.
+
+### 3D board view
+
+![Uno with the external LED lit by solved forward current](docs/board3d.png)
+
+The onboard LED follows GPIO, while the external LED is lit by the *solved*
+forward current through the 220 Ω resistor and the directional Shockley LED
+model — `Vpin 4.709 V`, `Iled 11.63 mA`. The banded resistor, the jumpers and
+all board geometry are procedural; there is no model asset.
+
+### Schematic view
+
+![Flat schematic of the external LED circuit](docs/schematic.png)
+
+The same operating point, presented flat. The overlay carries signed voltage and
+current, absorbed and supplied power, and the KCL residual (`3.2e-14 A`).
+
+### Ultrasonic ranging, to scale
+
+![To-scale Uno wired to an HC-SR04, with a target cube at 300 mm](docs/ranging.png)
+
+One unit is 10 mm, so the 68.6 mm Uno, the 45 mm module with its 2.54 mm header
+pitch, the 1.5 mm jumpers and the 100 mm ruler ticks are all at real size. The
+panel reads `firmware measured 0.297 m` against a true `0.300 m`.
+
+The same scene with the target at 2 m shows why the scale is worth keeping:
+
+![The same rig with the target at 2 m, now a few pixels across](docs/ranging-2m.png)
+
+The whole rig is a few pixels across, because 2 m really is 200 times the
+module's 10 mm features. That is the honest picture, not a framing bug — see
+[the model limits](#model-limits).
+
 ```
   3D board view                                     Schematic view
  ┌────────────────────────────────────┐      ┌──────────────────────────────┐
@@ -101,13 +139,41 @@ cycle, so stepping a fixed instruction count would run ~1.3x fast.
 
 `BLINK_FRAMES=N` exits after `N` rendered frames and prints a summary;
 `BLINK_VIEW=3d` or `=sensor` selects the starting presentation.
-`BLINK_REVERSED=1` starts with the LED reversed, `SENSOR_DISTANCE_M=1.2` sets the
-reflector's starting position, and `BLINK_SCREENSHOT=shot.png` writes the final
-rendered frame — which is how the 3D views are reviewed without a human at the
-window. The capture must happen outside the draw handle, because raylib batches
-2D draws and only flushes them in `EndDrawing`. The blink summary includes signed
-LED voltage/current and DC solves; the ranging summary includes the reflector's
-true distance, the firmware's measurement, the echo width and the sequence count.
+`BLINK_REVERSED=1` starts with the LED reversed and `SENSOR_DISTANCE_M=1.2` sets
+the reflector's starting position.
+
+`BLINK_SCREENSHOT=shot.png` captures a rendered frame, which is how the images
+above are produced. Two raylib behaviours make the hook slightly surprising, so
+they are worth knowing before regenerating anything:
+
+* raylib batches 2D draws and only flushes them in `EndDrawing`, so the capture
+  has to happen **outside** the draw handle or the entire overlay is missing.
+* the capture reflects the frame presented **immediately before** the current
+  one, because the read happens across a buffer swap. A blinking subject can
+  therefore land in either phase, and the frame count has to be chosen with that
+  in mind.
+* the value is a *base name* in the working directory: raylib drops any
+  directory part, so `docs/shot.png` writes `./shot.png`.
+
+The blink summary includes signed LED voltage/current and DC solves; the ranging
+summary includes the reflector's true distance, the firmware's measurement, the
+echo width and the sequence count.
+
+The committed images were regenerated from a release build with:
+
+```sh
+cd blink-gui
+BLINK_VIEW=3d        BLINK_FRAMES=76  BLINK_SCREENSHOT=board3d.png  cargo run --release
+BLINK_VIEW=schematic BLINK_FRAMES=76  BLINK_SCREENSHOT=schematic.png cargo run --release
+BLINK_VIEW=sensor BLINK_FRAMES=150 SENSOR_DISTANCE_M=0.30 BLINK_SCREENSHOT=ranging.png cargo run --release
+BLINK_VIEW=sensor BLINK_FRAMES=150 SENSOR_DISTANCE_M=2.00 BLINK_SCREENSHOT=ranging-2m.png cargo run --release
+mv board3d.png schematic.png ranging.png ranging-2m.png docs/
+```
+
+76 frames lands the blink captures at 1250 ms, which is mid-way through a lit
+half-period, so the external LED is at full solved brightness rather than in a
+dark phase. The ranging captures are steady state, so the one-frame lag does not
+matter there.
 
 ```sh
 BLINK_FRAMES=600 ./target/release/blink-gui
@@ -315,7 +381,7 @@ there is no arbitration or clock stretching. The 343 m/s constant is a textbook
 value rather than a calibration, and nothing here is a substitute for measuring
 a real module.
 
-### Why not STL
+## Why not STL
 
 **raylib has no STL loader at all.** Its entire `LoadModel` dispatch is:
 
@@ -329,7 +395,7 @@ Worse, it fails *silently* rather than erroring: `load_model("x.stl")` returns
 out.obj`, Blender, `trimesh`) — or, as here, build the geometry in code and skip
 the binary asset, the conversion step and the model licence entirely.
 
-### Why there is a custom shader
+## Why there is a custom shader
 
 raylib's built-in shader is unlit, and every mesh raylib generates carries
 normals but **no** vertex colours (`colors().len() == 0` for `gen_mesh_cube`,
@@ -339,7 +405,7 @@ use the normals raylib already provides to add one diffuse term. raylib passes
 `matNormal` as the inverse-transpose of the model matrix, so the heavily
 non-uniform scale of the PCB still shades correctly.
 
-### Why the camera is hand-rolled
+## Why the camera is hand-rolled
 
 raylib-rs gates its **entire** camera module behind
 `#[cfg(not(feature = "nobuild"))]` — under `nobuild` there is no `Camera3D`,

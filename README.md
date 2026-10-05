@@ -3,6 +3,13 @@
 A native Rust AVR simulator compatibility port, with a pinned AVR8js reference
 and converted behavioral tests. No JavaScript runtime or bridge is used.
 
+![To-scale Uno wired to an HC-SR04, with a target cube at the distance the firmware measured](blink-gui/docs/ranging.png)
+
+*The optional raylib front-end running a real HC-SR04 sketch: a to-scale Uno
+wired to the module, a 100 mm ruler track, and a target cube at the distance the
+**firmware** measured. See [`blink-gui/`](blink-gui/) for more, including the
+blink views and the circuit behind them.*
+
 ## Get started
 
 ```sh

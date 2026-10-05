@@ -276,12 +276,19 @@ fn main() {
 
         frame += 1;
 
-        // `BLINK_SCREENSHOT=shot.png` captures the final rendered frame, which
-        // is how this 3D view is reviewed without a human at the window. It has
-        // to run *after* the draw handle closes: raylib batches 2D draws and
-        // only flushes them in `EndDrawing`, so a capture taken inside the
-        // handle would lose the whole overlay. The path is used as given, which
-        // means a relative one lands in the working directory.
+        // `BLINK_SCREENSHOT=shot.png` captures a rendered frame, which is how
+        // these views are reviewed, documented and regenerated without a human
+        // at the window.
+        //
+        // Three raylib behaviours shape this hook. It must run *after* the draw
+        // handle closes, because raylib batches 2D draws and only flushes them
+        // in `EndDrawing` — a capture taken inside the handle loses the whole
+        // overlay. The capture reflects the frame presented immediately
+        // *before* the current one, because the read happens across a buffer
+        // swap, so a blinking subject can land in either phase and regenerating
+        // an image means choosing the frame count with that in mind. And the
+        // value is a *base name* in the working directory: raylib drops any
+        // directory part, so `docs/shot.png` writes `./shot.png`.
         if frame == frame_limit {
             if let Ok(path) = std::env::var("BLINK_SCREENSHOT") {
                 rl.take_screenshot(&thread, &path);
