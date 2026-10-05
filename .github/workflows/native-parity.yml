@@ -31,6 +31,8 @@ jobs:
           cache-dependency-path: rust_port/tools/package-lock.json
       - name: Verify native suites in debug and release
         run: bash rust_port/tools/verify-native.sh
+      - name: Verify breadboard host and external components
+        run: bash breadboard/tools/verify-breadboard.sh
       - name: Install pinned conversion tooling
         run: npm --prefix rust_port/tools ci --ignore-scripts
       - name: Verify deterministic conversion and source hashes

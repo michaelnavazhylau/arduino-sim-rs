@@ -1,0 +1,12 @@
+[package]
+name = "breadboard"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+description = "Headless host, simulated-time scheduler and external components for the native AVR simulator"
+publish = false
+
+[dependencies]
+avr-port-tests = { path = "../rust_port" }
+analog-solver = { path = "../analog-solver" }
+circuit-components = { path = "../circuit-components" }

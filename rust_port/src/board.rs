@@ -72,6 +72,12 @@ pub struct Board {
     pub portc: Handle,
     /// `PORTD` — Arduino digital pins 0-7.
     pub portd: Handle,
+    /// `AVRADC`, so a host can supply `channelValues` from a solved circuit.
+    pub adc: Handle,
+    /// `AVRTWI`, so a host can attach an I2C slave handler.
+    pub twi: Handle,
+    /// `AVRSPI`, so a host can attach a peripheral transfer handler.
+    pub spi: Handle,
     /// EEPROM backend; see [`Board::eeprom_bytes`].
     pub eeprom: Handle,
 }
@@ -132,21 +138,27 @@ impl Board {
                 frequency.clone(),
             ],
         );
-        backend.construct(
-            runtime,
-            "AVRADC",
-            vec![cpu.clone(), backend.resolve("adcConfig")],
-        );
-        backend.construct(
-            runtime,
-            "AVRSPI",
-            vec![cpu.clone(), backend.resolve("spiConfig"), frequency.clone()],
-        );
-        backend.construct(
-            runtime,
-            "AVRTWI",
-            vec![cpu.clone(), backend.resolve("twiConfig"), frequency],
-        );
+        let adc = backend
+            .construct(
+                runtime,
+                "AVRADC",
+                vec![cpu.clone(), backend.resolve("adcConfig")],
+            )
+            .handle();
+        let spi = backend
+            .construct(
+                runtime,
+                "AVRSPI",
+                vec![cpu.clone(), backend.resolve("spiConfig"), frequency.clone()],
+            )
+            .handle();
+        let twi = backend
+            .construct(
+                runtime,
+                "AVRTWI",
+                vec![cpu.clone(), backend.resolve("twiConfig"), frequency],
+            )
+            .handle();
         backend.construct(
             runtime,
             "AVRWatchdog",
@@ -171,6 +183,9 @@ impl Board {
             portb,
             portc,
             portd,
+            adc,
+            twi,
+            spi,
             eeprom,
         }
     }
