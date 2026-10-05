@@ -153,6 +153,8 @@ pub enum CouplingError {
     UnknownNet { pin: Pin, net: String },
     /// The same pin was bound twice.
     DuplicateBinding(Pin),
+    /// A switch binding named a part that is absent, or is not a switch.
+    NotASwitch(String),
     /// A topology update or solve failed outright.
     Solve(SolveError),
 }
@@ -169,6 +171,9 @@ impl fmt::Display for CouplingError {
             }
             Self::DuplicateBinding(pin) => {
                 write!(f, "analog coupling: pin {pin} is bound more than once")
+            }
+            Self::NotASwitch(reference) => {
+                write!(f, "analog coupling: {reference:?} is not a placed switch")
             }
             Self::Solve(error) => write!(f, "analog coupling: {error}"),
         }
@@ -240,10 +245,27 @@ impl AnalogReading {
 }
 
 /// An analog circuit coupled to specific Uno pins.
+/// A switch the host can throw.
+///
+/// A mechanical switch is not a pin drive and not a sensor: it changes the
+/// electrical network itself. It is therefore neither a [`Stimulus`] nor part of
+/// the MCU driver model, but a netlist part whose state the coupling applies.
+///
+/// [`Stimulus`]: crate::Stimulus
+#[derive(Clone, Debug)]
+struct SwitchBinding {
+    reference: String,
+    /// State the host has asked for.
+    closed: bool,
+    /// State the compiled topology was built with.
+    applied: bool,
+}
+
 pub struct AnalogCoupling {
     netlist: Netlist,
     registry: PartRegistry,
     wiring: Wiring,
+    switches: Vec<SwitchBinding>,
     supply_volts: f64,
     output_ohms: f64,
     pullup_ohms: f64,
@@ -263,6 +285,7 @@ impl fmt::Debug for AnalogCoupling {
         f.debug_struct("AnalogCoupling")
             .field("nets", &self.netlist.net_names())
             .field("bindings", &self.wiring.bindings())
+            .field("switches", &self.switches)
             .field("modes", &self.modes)
             .field("solves", &self.solves)
             .field("outcome", &self.reading.outcome())
@@ -295,6 +318,7 @@ impl AnalogCoupling {
             netlist,
             registry,
             wiring,
+            switches: Vec::new(),
             supply_volts: 5.0,
             output_ohms: 25.0,
             pullup_ohms: 30_000.0,
@@ -348,6 +372,59 @@ impl AnalogCoupling {
         &self.wiring
     }
 
+    /// Let the host throw the switch placed as `reference`.
+    ///
+    /// The part must already be in the netlist and be a `switch`. Its state is
+    /// applied on the next [`AnalogCoupling::update`], which recompiles the
+    /// topology, because a closed contact and an open one differ in conductance
+    /// by nine decades.
+    pub fn bind_switch(&mut self, reference: &str) -> Result<(), CouplingError> {
+        let is_switch = self
+            .netlist
+            .parts()
+            .iter()
+            .any(|part| part.reference == reference && part.part == "switch");
+        if !is_switch {
+            return Err(CouplingError::NotASwitch(reference.to_string()));
+        }
+        if self.switches.iter().any(|s| s.reference == reference) {
+            return Ok(());
+        }
+        // `closed` and `applied` agree, so binding alone does not force a
+        // recompile: the netlist's own default is already in the compiled
+        // topology.
+        self.switches.push(SwitchBinding {
+            reference: reference.to_string(),
+            closed: false,
+            applied: false,
+        });
+        Ok(())
+    }
+
+    /// Open or close a bound switch, returning whether it was bound at all.
+    pub fn set_switch(&mut self, reference: &str, closed: bool) -> bool {
+        match self.switches.iter_mut().find(|s| s.reference == reference) {
+            Some(switch) => {
+                switch.closed = closed;
+                true
+            }
+            None => false,
+        }
+    }
+
+    /// The requested state of a bound switch.
+    pub fn switch(&self, reference: &str) -> Option<bool> {
+        self.switches
+            .iter()
+            .find(|s| s.reference == reference)
+            .map(|s| s.closed)
+    }
+
+    /// Reference designators of the bound switches, in binding order.
+    pub fn switches(&self) -> impl Iterator<Item = &str> {
+        self.switches.iter().map(|s| s.reference.as_str())
+    }
+
     /// The most recent reading.
     pub fn reading(&self) -> &AnalogReading {
         &self.reading
@@ -379,9 +456,12 @@ impl AnalogCoupling {
             .collect();
         let shapes: Vec<DriverShape> = modes.iter().map(|mode| DriverShape::of(*mode)).collect();
 
-        if self.compiled.is_none() || shapes != self.shapes {
+        if self.compiled.is_none() || shapes != self.shapes || self.switches_dirty() {
             self.rebuild(&modes)?;
             self.shapes = shapes;
+            for switch in &mut self.switches {
+                switch.applied = switch.closed;
+            }
         } else if modes != self.modes {
             self.repoint(&modes)?;
         } else {
@@ -417,9 +497,29 @@ impl AnalogCoupling {
     }
 
     /// Rebuild the topology with a driver per driven pin and solve it.
+    /// True when any switch state differs from the compiled one.
+    fn switches_dirty(&self) -> bool {
+        self.switches
+            .iter()
+            .any(|switch| switch.closed != switch.applied)
+    }
+
     fn rebuild(&mut self, modes: &[PinState]) -> Result<(), CouplingError> {
         let ground = self.netlist.ground_net().to_string();
         let mut netlist = self.netlist.clone();
+        // Switch state is a parameter change, not a topology edit, so it is
+        // applied to the description before anything is stamped. A closed
+        // contact and an open one differ in conductance by nine decades, which
+        // is why a toggle recompiles rather than reusing the matrix.
+        for switch in &self.switches {
+            netlist
+                .set_parameter(
+                    &switch.reference,
+                    "closed",
+                    if switch.closed { 1.0 } else { 0.0 },
+                )
+                .map_err(CouplingError::Netlist)?;
+        }
         for (index, (pin, net)) in self.wiring.bindings().iter().enumerate() {
             let mode = modes[index];
             if DriverShape::of(mode) == DriverShape::Absent {

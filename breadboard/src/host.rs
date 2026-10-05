@@ -235,6 +235,11 @@ impl BreadboardHost {
         self.analog.as_ref()
     }
 
+    /// Mutable access to the coupling, for throwing a switch or moving a part.
+    pub fn analog_mut(&mut self) -> Option<&mut AnalogCoupling> {
+        self.analog.as_mut()
+    }
+
     /// Attach `slaves` to the I2C bus and route `AVRTWI` to them.
     pub fn attach_i2c(&mut self, slaves: Vec<Box<dyn I2cSlave>>) {
         self.backend.set(
