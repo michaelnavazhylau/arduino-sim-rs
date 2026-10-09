@@ -1,8 +1,8 @@
 # arduino-sim-rs
 
-[![crates.io](https://img.shields.io/crates/v/avr-sim.svg)](https://crates.io/crates/avr-sim)
-[![docs.rs](https://docs.rs/avr-sim/badge.svg)](https://docs.rs/avr-sim)
-[![license](https://img.shields.io/crates/l/avr-sim.svg)](LICENSE)
+[![crates.io](https://img.shields.io/crates/v/avr8rs.svg)](https://crates.io/crates/avr8rs)
+[![docs.rs](https://docs.rs/avr8rs/badge.svg)](https://docs.rs/avr8rs)
+[![license](https://img.shields.io/crates/l/avr8rs.svg)](LICENSE)
 
 A native Rust AVR simulator compatibility port, with a pinned AVR8js reference
 and a converted behavioral contract. No JavaScript runtime or bridge is used.
@@ -27,25 +27,25 @@ For an existing clone, initialize the reference with
 
 ## Layout and status
 
-- [`rust_port/`](rust_port/): the dependency-free `avr-sim` crate — simulator
+- [`rust_port/`](rust_port/): the dependency-free `avr8rs` crate — simulator
   core, host-side board glue, the scenario representation and its runner,
   hardware specification provenance and the offline engine gate. Published on
-  [crates.io](https://crates.io/crates/avr-sim) with
-  [API docs](https://docs.rs/avr-sim).
+  [crates.io](https://crates.io/crates/avr8rs) with
+  [API docs](https://docs.rs/avr8rs).
 - [`blink-gui/`](blink-gui/): optional raylib GUI. It runs a real blink sketch
   on the simulator as a flat schematic or a procedural 3D rendition of the Uno,
   runs a real HC-SR04 sketch in a **to-scale** (1 unit = 10 mm) 3D scene where the
   Uno is wired to the module with jumpers and a target cube sits at the distance
   the firmware measured, and runs a three-LED breadboard demo where equal 330 Ω
   resistors turn out to be a different operating point on red, green and blue.
-  Kept outside `avr-sim` (`rust_port/`) so the core stays dependency-free and the
+  Kept outside `avr8rs` (`rust_port/`) so the core stays dependency-free and the
   offline engine gate is unaffected.
 - [`breadboard/`](breadboard/): headless host, simulated-time event scheduler,
   analog pin/ADC coupling, I2C and SPI device attachment, and external components
   (an HC-SR04 ultrasonic distance sensor) wired to a real AVR board. Electrical
   circuits are SPICE decks solved by
   [ngspice-rs](https://github.com/michaelnavazhylau/ngspice-rs), a from-scratch
-  Rust port of ngspice with no FFI. Depends on `avr-sim`; the core does not
+  Rust port of ngspice with no FFI. Depends on `avr8rs`; the core does not
   depend on it.
 - [`avr8js/`](avr8js/): upstream reference submodule pinned at
   `bee6f0a94e0e27786f6bc21aee3c775849fb50fd`. Kept for provenance — it records
@@ -58,7 +58,7 @@ For an existing clone, initialize the reference with
   a lockfile with the hand-written engine.
 
 **All 347 converted scenarios pass by default**, with **zero ignored cases**.
-They run in `avr8js-parity` against this repository's `avr-sim` crate, alongside
+They run in `avr8js-parity` against this repository's `avr8rs` crate, alongside
 a coverage test; the engine's own 45 tests run here. Implementation milestones
 0–6 are complete: assembler, CPU/instructions/interrupts, clock, GPIO, megaAVR
 timers, ATtiny Timer1, EEPROM, ADC, SPI, USART, TWI master states and watchdog.

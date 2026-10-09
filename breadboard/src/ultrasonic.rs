@@ -19,7 +19,7 @@ use crate::pin::{Drive, Pin};
 use crate::scene::Reflector;
 use crate::stimulus::{InputChange, Stimulus, StimulusCtx};
 use crate::time::{micros_to_cycles, speed_of_sound_m_per_s};
-use avr_sim::board::UNO_CLOCK_HZ;
+use avr8rs::board::UNO_CLOCK_HZ;
 use std::any::Any;
 use std::error::Error;
 use std::fmt;

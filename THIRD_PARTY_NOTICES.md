@@ -74,7 +74,7 @@ count and SHA-256 hash — is published, in
 
 ## Rust dependencies
 
-The `avr-sim` crate in [`rust_port/`](rust_port/) has an empty `[dependencies]`
+The `avr8rs` crate in [`rust_port/`](rust_port/) has an empty `[dependencies]`
 table, so no third-party Rust code is compiled into the AVR simulator, its
 scenario runner or its gate.
 

@@ -1,8 +1,8 @@
-# avr-sim — native Rust AVR simulator core
+# avr8rs — native Rust AVR simulator core
 
-[![crates.io](https://img.shields.io/crates/v/avr-sim.svg)](https://crates.io/crates/avr-sim)
-[![docs.rs](https://docs.rs/avr-sim/badge.svg)](https://docs.rs/avr-sim)
-[![license](https://img.shields.io/crates/l/avr-sim.svg)](LICENSE)
+[![crates.io](https://img.shields.io/crates/v/avr8rs.svg)](https://crates.io/crates/avr8rs)
+[![docs.rs](https://docs.rs/avr8rs/badge.svg)](https://docs.rs/avr8rs)
+[![license](https://img.shields.io/crates/l/avr8rs.svg)](LICENSE)
 
 A dependency-free native Rust AVR8 simulator: assembler, CPU/instructions/
 interrupts, clock, GPIO, megaAVR timers, ATtiny Timer1, EEPROM, ADC, SPI, USART,
@@ -16,7 +16,7 @@ converted AVR8js suites, 347 cases and 853 assertion sites live in
 [`avr8js-parity`](https://github.com/michaelnavazhylau/avr8js-parity) together
 with the converter that produces them and the pinned upstream revision they are
 asserted against, so 27k lines of machine-written scenarios no longer share a
-history or a lockfile with this crate. `avr-sim` keeps an empty `[dependencies]`
+history or a lockfile with this crate. `avr8rs` keeps an empty `[dependencies]`
 table, which is what makes the offline gate hermetic and the crate publishable.
 
 ## Hardware and compatibility specifications

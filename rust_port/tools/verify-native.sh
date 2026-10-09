@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Fail-closed gate for the avr-sim engine and its own regressions. Node is not
+# Fail-closed gate for the avr8rs engine and its own regressions. Node is not
 # required and neither is the upstream submodule: the converted AVR8js contract
 # is generated and verified in the avr8js-parity repository, whose gate rejects
 # any converted scenario that is `#[ignore]`d.

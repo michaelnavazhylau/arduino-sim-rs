@@ -7,7 +7,7 @@
 //! paused or slow host therefore cannot change a sensor's behaviour, which is
 //! the property the sim2real roadmap requires of AVR/analog time coupling.
 
-use avr_sim::board::UNO_CLOCK_HZ;
+use avr8rs::board::UNO_CLOCK_HZ;
 
 /// Convert an AVR cycle count to microseconds at [`UNO_CLOCK_HZ`].
 pub fn cycles_to_micros(cycles: u64) -> f64 {

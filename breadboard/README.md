@@ -1,7 +1,7 @@
 # breadboard
 
 Headless host, simulated-time scheduler and external components for the native
-AVR simulator. It depends on the `avr-sim` crate in the sibling
+AVR simulator. It depends on the `avr8rs` crate in the sibling
 [`rust_port`](../rust_port/) directory and on
 [ngspice-rs](https://github.com/michaelnavazhylau/ngspice-rs) for
 operating-point solves; there is no GUI or renderer here, and nothing in this

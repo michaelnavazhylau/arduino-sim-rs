@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 
 //! Ownership restoration and source ordering at peripheral host boundaries.
-use avr_sim::{native_backend, runtime::Handle, scenario::*, Backend, Case, Runtime, Value};
+use avr8rs::{native_backend, runtime::Handle, scenario::*, Backend, Case, Runtime, Value};
 use std::{
     panic::{catch_unwind, AssertUnwindSafe},
     rc::Rc,

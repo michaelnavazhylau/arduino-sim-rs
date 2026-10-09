@@ -59,7 +59,7 @@ Source of truth:
 Existing gates:
 
 ```sh
-bash rust_port/tools/verify-native.sh          # avr-sim engine and its regressions
+bash rust_port/tools/verify-native.sh          # avr8rs engine and its regressions
 bash breadboard/tools/verify-breadboard.sh     # host, scheduler, analog coupling, buses
 ```
 
@@ -77,7 +77,7 @@ characterizations.
 
 ## Boundaries
 
-- **`avr-sim`** (`rust_port/`) keeps an empty `[dependencies]` table and its
+- **`avr8rs`** (`rust_port/`) keeps an empty `[dependencies]` table and its
   offline gate. Nothing electrical may move into it. It also no longer carries
   the generated AVR8js contract: that moved to
   [avr8js-parity](https://github.com/michaelnavazhylau/avr8js-parity), so 27k

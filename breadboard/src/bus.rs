@@ -28,8 +28,8 @@
 //!   continuous session. A device needing framing must use a GPIO as CS.
 //! * Devices are attached in code. They are not netlist parts.
 
-use avr_sim::runtime::Handle;
-use avr_sim::{Backend, Runtime, Value};
+use avr8rs::runtime::Handle;
+use avr8rs::{Backend, Runtime, Value};
 use std::any::Any;
 use std::cell::RefCell;
 use std::collections::BTreeMap;

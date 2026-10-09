@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-use avr_sim::{
+use avr8rs::{
     runtime::{deep_equal, Handle},
     scenario::*,
     Backend, Runtime, Value,
@@ -498,7 +498,7 @@ fn failed_assertions_report_source_line() {
 fn native_backend_fails_on_unimplemented_operations() {
     // The native backend is real, but it must never fabricate default objects for
     // an operation it does not actually implement.
-    let mut runtime = Runtime::new(avr_sim::native_backend());
+    let mut runtime = Runtime::new(avr8rs::native_backend());
     execute(
         &mut runtime,
         vec![at(1, bind("x", new("NotAnAvrObject", vec![])))],

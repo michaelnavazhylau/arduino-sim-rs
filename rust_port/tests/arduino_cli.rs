@@ -13,8 +13,8 @@
 //! so it only runs in release builds. `tools/verify-native.sh` runs both
 //! profiles and therefore exercises it.
 
-use avr_sim::board::{parse_hex, Board, PinState, LED_BUILTIN_PIN, PORTB};
-use avr_sim::{native_backend, Backend, Runtime};
+use avr8rs::board::{parse_hex, Board, PinState, LED_BUILTIN_PIN, PORTB};
+use avr8rs::{native_backend, Backend, Runtime};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::rc::Rc;

@@ -10,7 +10,7 @@ publish = false
 # Deliberately outside the `rust_port` package: `rust_port` stays
 # dependency-free and its `--locked --offline` CI gate is unaffected.
 [dependencies]
-avr-sim = { path = "../rust_port" }
+avr8rs = { path = "../rust_port" }
 # The electrical backend, and the SPICE helpers and LED presets it re-exports.
 breadboard = { path = "../breadboard" }
 # `nobuild` links the system raylib instead of compiling the vendored copy with

@@ -12,7 +12,7 @@
 //! point of a switch model with finite resistance in *both* states is that an
 //! open contact is not a perfect break and a closed one is not a perfect short.
 
-use avr_sim::sim::assembler::assemble;
+use avr8rs::sim::assembler::assemble;
 use breadboard::{AnalogCoupling, BreadboardHost, CouplingError, Pin, Scene, Wiring};
 
 const DDRB: usize = 0x24;

@@ -70,4 +70,4 @@ pub use time::{cycles_to_micros, micros_to_cycles, speed_of_sound_m_per_s};
 pub use ultrasonic::{HcSr04, Measurement, UltrasonicError, UltrasonicParameters};
 
 /// Uno clock rate in Hz, re-exported so timing arithmetic uses one constant.
-pub use avr_sim::board::UNO_CLOCK_HZ;
+pub use avr8rs::board::UNO_CLOCK_HZ;

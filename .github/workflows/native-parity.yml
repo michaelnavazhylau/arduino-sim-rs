@@ -30,7 +30,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@1.99.0
         with:
           components: rustfmt, clippy
-      - name: Verify the avr-sim engine and its regressions
+      - name: Verify the avr8rs engine and its regressions
         run: bash rust_port/tools/verify-native.sh
       - name: Verify breadboard host and external components
         run: bash breadboard/tools/verify-breadboard.sh

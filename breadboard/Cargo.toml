@@ -7,7 +7,7 @@ description = "Headless host, simulated-time scheduler and external components f
 publish = false
 
 [dependencies]
-avr-sim = { path = "../rust_port" }
+avr8rs = { path = "../rust_port" }
 # The electrical backend: a from-scratch Rust port of ngspice. Pure Rust, no C
 # toolchain and no FFI. It brings in diffsol/faer for its sparse linear algebra,
 # so this crate is no longer buildable --offline on a cold registry.

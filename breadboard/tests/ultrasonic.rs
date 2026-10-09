@@ -7,7 +7,7 @@
 //! AVR port register -> `PINx` pad -> host observation -> sensor state machine
 //! -> scheduled event -> external drive -> `PINx` back to the AVR.
 
-use avr_sim::sim::assembler::assemble;
+use avr8rs::sim::assembler::assemble;
 use breadboard::{
     BreadboardHost, Drive, HcSr04, HostError, Pin, Reflector, Scene, Stimulus,
     UltrasonicParameters, UNO_CLOCK_HZ,
