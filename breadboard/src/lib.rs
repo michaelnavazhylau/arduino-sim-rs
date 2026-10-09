@@ -6,7 +6,7 @@
 //! roadmap](../../docs/sim2real-roadmap.md) calls for: it owns the MCU pin
 //! drivers, the simulated-time event queue and the components wired to the
 //! board, and it depends on the AVR core rather than the other way round.
-//! `rust_port` stays dependency-free and the electrical layer stays
+//! `avr8rs` stays dependency-free and the electrical layer stays
 //! renderer-free.
 //!
 //! The central distinction in the electrical layer is **time**. A resistor or

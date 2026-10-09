@@ -59,15 +59,21 @@ Source of truth:
 Existing gates:
 
 ```sh
-bash rust_port/tools/verify-native.sh          # avr8rs engine and its regressions
 bash breadboard/tools/verify-breadboard.sh     # host, scheduler, analog coupling, buses
 ```
 
-The converted AVR8js contract has its own gate in the separate
-[avr8js-parity](https://github.com/michaelnavazhylau/avr8js-parity) repository:
-it rejects any converted scenario that is `#[ignore]`d, then runs the contract in
-debug and release, and separately verifies deterministic conversion and source
-hashes against the pinned upstream submodule.
+Two further gates live in their own repositories, because the code they cover
+was split out to stop the generated scenarios and the hand-written engine from
+sharing a history and a lockfile with this front-end:
+
+- [avr8rs](https://github.com/michaelnavazhylau/avr8rs) runs
+  `bash tools/verify-native.sh` for the engine and its regressions, plus the
+  `Arduino CLI end-to-end` workflow that runs compiled ATmega328P firmware on the
+  native backend.
+- [avr8js-parity](https://github.com/michaelnavazhylau/avr8js-parity) rejects any
+  converted scenario that is `#[ignore]`d, runs the converted contract in debug
+  and release, and separately verifies deterministic conversion and source hashes
+  against the pinned upstream submodule.
 
 Keep the solved forward/reverse LED operating points, the Ohm's-law and diode
 curve cross-check, the switch divider predictions, the threshold band and the
@@ -77,12 +83,16 @@ characterizations.
 
 ## Boundaries
 
-- **`avr8rs`** (`rust_port/`) keeps an empty `[dependencies]` table and its
-  offline gate. Nothing electrical may move into it. It also no longer carries
-  the generated AVR8js contract: that moved to
+- **`avr8rs`** is consumed by version, from crates.io, and lives in its own
+  repository. It keeps an empty `[dependencies]` table and its own offline gate,
+  and nothing electrical may move into it. It no longer carries the generated
+  AVR8js contract either: that is in
   [avr8js-parity](https://github.com/michaelnavazhylau/avr8js-parity), so 27k
   lines of generated scenarios cannot add a dependency or a lockfile entry here,
-  and regeneration never lands in this repository's history.
+  and regeneration never lands in this repository's history. Because this
+  repository pins a version, an engine change needs a publish before it is
+  visible here — `avr8js-parity` deliberately keeps a path dependency so it can
+  still gate unreleased engine commits.
 - **`breadboard`** owns MCU pin drivers, board rails, threshold/ADC rules,
   timestamped external events and the analog/digital bridge. It owns the only
   ngspice-rs dependency.

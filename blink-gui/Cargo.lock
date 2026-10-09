@@ -38,7 +38,9 @@ checksum = "f2032f911046de80f0a198e0901378627c33f59ea0ac00e363d481118bd70a53"
 
 [[package]]
 name = "avr8rs"
-version = "0.1.0"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ce547f620e51e0cc935b07c05e43fa8025ffed9a0951c4e582f8f58271576b4f"
 
 [[package]]
 name = "bindgen"

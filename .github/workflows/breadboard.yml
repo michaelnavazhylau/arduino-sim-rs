@@ -1,4 +1,4 @@
-name: Native AVR engine and breadboard
+name: breadboard host and electrical layer
 
 on:
   push:
@@ -9,18 +9,17 @@ permissions:
   contents: read
 
 jobs:
-  native:
+  breadboard:
     # Pinned rather than ubuntu-latest, which migrates to Ubuntu 26 in Oct 2026.
     runs-on: ubuntu-24.04
-    # Raised from 15 when the breadboard gate took on ngspice-rs: faer, diffsol,
+    # Was 15 before the breadboard gate took on ngspice-rs: faer, diffsol,
     # nalgebra and their transitive crates are compiled in both debug and release
     # on a cold cache, which dominates the job.
     timeout-minutes: 30
     steps:
-      # The pinned avr8js submodule is a read-only reference for this port's
-      # compatibility claims and is not needed by either gate. The converted
-      # contract, the converter and the deterministic-conversion check live in
-      # the avr8js-parity repository, which verifies itself.
+      # The engine is consumed from crates.io, so no sibling checkout and no
+      # submodule are needed. The engine's own gate and the converted AVR8js
+      # contract run in their own repositories.
       - uses: actions/checkout@v7
         with:
           persist-credentials: false
@@ -30,7 +29,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@1.99.0
         with:
           components: rustfmt, clippy
-      - name: Verify the avr8rs engine and its regressions
-        run: bash rust_port/tools/verify-native.sh
-      - name: Verify breadboard host and external components
+      - name: Verify the breadboard host and external components
         run: bash breadboard/tools/verify-breadboard.sh
+      - name: Verify blink-gui compiles against the published engine
+        run: cargo check --manifest-path blink-gui/Cargo.toml --all-targets --locked

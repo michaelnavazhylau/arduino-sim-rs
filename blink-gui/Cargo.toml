@@ -7,10 +7,11 @@ description = "Raylib GUI that runs a real Arduino blink sketch on the native AV
 repository = "https://github.com/michaelnavazhylau/arduino-sim-rs"
 publish = false
 
-# Deliberately outside the `rust_port` package: `rust_port` stays
-# dependency-free and its `--locked --offline` CI gate is unaffected.
+# Deliberately outside the engine repository: `avr8rs` stays dependency-free and
+# its `--locked --offline` CI gate is unaffected.
 [dependencies]
-avr8rs = { path = "../rust_port" }
+# Published engine crate, from its own repository. See breadboard/Cargo.toml.
+avr8rs = "0.1"
 # The electrical backend, and the SPICE helpers and LED presets it re-exports.
 breadboard = { path = "../breadboard" }
 # `nobuild` links the system raylib instead of compiling the vendored copy with

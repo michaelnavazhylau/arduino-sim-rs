@@ -1,7 +1,8 @@
 # blink-gui
 
-A raylib front-end for the native AVR simulator in `../rust_port`. Six views
-share one window: the simulator runs a **real Arduino sketch** built by
+A raylib front-end for the native AVR simulator, consuming the
+[`avr8rs`](https://crates.io/crates/avr8rs) engine crate from crates.io. Six
+views share one window: the simulator runs a **real Arduino sketch** built by
 `arduino-cli` for an ATmega328P, and raylib only observes it.
 
 * **Blink** — a `.op` solve by ngspice-rs computes the external circuit's
@@ -129,15 +130,14 @@ value.
  └────────────────────────────────────┘      └──────────────────────────────┘
 ```
 
-## Why it lives here, not in `rust_port`
+## Why it lives here, not in the engine repository
 
-This crate is deliberately **outside** the `rust_port` package (the `avr8rs`
-crate):
+This crate is deliberately **outside** the
+[`avr8rs`](https://github.com/michaelnavazhylau/avr8rs) repository:
 
-- `avr8rs` stays dependency-free, so its `--locked --offline` CI gates
-  (`tools/verify-native.sh`, `native-parity.yml`, `arduino-cli.yml`) keep
+- `avr8rs` stays dependency-free, so its `--locked --offline` CI gates keep
   passing unchanged. Adding raylib there would pull roughly 40 crates into that
-  lockfile and require vendoring for the offline jobs.
+  lockfile and require vendoring for the offline job.
 - The raylib dependency is confined to a demo, not the parity contract.
 - Nothing here is part of the AVR8js compatibility surface. All simulator access
   goes through `avr8rs::board`.
@@ -627,8 +627,8 @@ cargo fmt --check
 cargo clippy --all-targets --release --locked -- -D warnings
 cargo test --release --locked
 
-# From repository root:
-bash rust_port/tools/verify-native.sh
+# From repository root (the engine gate and the converted AVR8js contract run in
+# their own repositories):
 bash breadboard/tools/verify-breadboard.sh
 ```
 

@@ -1,10 +1,13 @@
 cff-version: 1.2.0
 message: "If you use this software, please cite it using the metadata below."
-title: "arduino-sim-rs: a native Rust AVR8 simulator compatibility port"
+title: "arduino-sim-rs: AVR8js-compatible simulator, engine and raylib front-end"
 abstract: >-
-  A dependency-free Rust implementation of an AVR8 (ATmega328P-class) simulator,
-  validated against the AVR8js behavioral test suite and against firmware
-  compiled by arduino-cli for Arduino UNO boards.
+  A native Rust AVR8 (ATmega328P-class) simulator compatibility port, validated
+  against the AVR8js behavioral test suite and against firmware compiled by
+  arduino-cli for Arduino UNO boards. The dependency-free simulator engine is the
+  `avr8rs` crate, developed in its own repository and consumed here from
+  crates.io; this repository holds the headless breadboard host and the raylib
+  front-end.
 type: software
 authors:
   - family-names: Navazhylau
@@ -22,6 +25,15 @@ keywords:
   - Arduino
   - embedded
 references:
+  - type: software
+    title: "avr8rs: dependency-free native Rust AVR8 simulator core"
+    authors:
+      - family-names: Navazhylau
+        given-names: Michael
+    repository-code: "https://github.com/michaelnavazhylau/avr8rs"
+    license: MIT
+    notes: >-
+      The simulator engine this front-end consumes by version.
   - type: software
     title: "AVR8js: AVR 8-bit microcontroller simulator in TypeScript"
     authors:

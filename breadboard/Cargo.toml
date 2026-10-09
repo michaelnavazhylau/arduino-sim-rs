@@ -7,7 +7,12 @@ description = "Headless host, simulated-time scheduler and external components f
 publish = false
 
 [dependencies]
-avr8rs = { path = "../rust_port" }
+# Version-based consumption, not a path dependency: the engine lives in its own
+# repository (github.com/michaelnavazhylau/avr8rs) and is published to crates.io.
+# An engine change therefore needs a version bump and a publish before it is
+# visible here. avr8js-parity keeps a path dependency instead, so it can gate
+# unreleased engine commits.
+avr8rs = "0.1"
 # The electrical backend: a from-scratch Rust port of ngspice. Pure Rust, no C
 # toolchain and no FFI. It brings in diffsol/faer for its sparse linear algebra,
 # so this crate is no longer buildable --offline on a cold registry.
