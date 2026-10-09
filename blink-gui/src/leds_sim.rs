@@ -3,7 +3,7 @@
 //! Simulator side of the three-LED indicator demo.
 //!
 //! Three indicator LEDs, one 330 Ω resistor each, on `D9`, `D10` and `D11`. The
-//! circuit is a **netlist** and the pins are coupled through `breadboard`'s
+//! circuit is a **SPICE deck** and the pins are coupled through `breadboard`'s
 //! `AnalogCoupling`, so the current behind each LED is *solved* rather than
 //! inferred from a GPIO boolean. Nothing here knows about rendering, so the
 //! electrical result is testable without a display.
@@ -14,9 +14,8 @@
 //! why real designs often pick a different resistor per colour rather than
 //! reusing one value.
 
-use breadboard::netlist::{resistor, Netlist, Parameters, PlacedPart};
-use breadboard::{AnalogCoupling, BreadboardHost, CouplingOutcome, Pin, Scene, Wiring};
-use circuit_components::{Led, LedParameters};
+use breadboard::{AnalogCoupling, BreadboardHost, CouplingOutcome, LedPreset, Pin, Scene, Wiring};
+use std::fmt::Write as _;
 
 /// Firmware built from `sketches/leds/leds.ino` for `arduino:avr:uno`.
 const FIRMWARE: &str = include_str!("../firmware/leds.hex");
@@ -37,34 +36,62 @@ pub struct Channel {
     pub led: &'static str,
     /// Net the pin drives, whose voltage is the driver's output.
     pub pin_net: &'static str,
+    /// Net between the series resistor and the LED anode.
+    pub anode_net: &'static str,
     /// Arduino pin index.
     pub pin: u8,
-    /// The model, so brightness uses the library's own mapping rather than a
-    /// second copy of the normalisation.
-    model: Led,
+    /// The model the deck is built from, so brightness uses the same mapping
+    /// rather than a second copy of the normalization.
+    preset: LedPreset,
 }
 
 /// The three channels, in the order the firmware sequences them.
 pub fn channels() -> [Channel; 3] {
-    let preset = |name, resistor, led, pin_net, pin, parameters| Channel {
+    let preset = |name, resistor, led, pin_net, anode_net, pin, preset| Channel {
         name,
         resistor,
         led,
         pin_net,
+        anode_net,
         pin,
-        model: Led::new(parameters).expect("documented LED presets are valid"),
+        preset,
     };
     [
-        preset("red", "R1", "D1", "p_red", 9, LedParameters::red()),
-        preset("green", "R2", "D2", "p_green", 10, LedParameters::green()),
-        preset("blue", "R3", "D3", "p_blue", 11, LedParameters::blue()),
+        preset("red", "R1", "D1", "p_red", "a_red", 9, LedPreset::red()),
+        preset(
+            "green",
+            "R2",
+            "D2",
+            "p_green",
+            "a_green",
+            10,
+            LedPreset::green(),
+        ),
+        preset(
+            "blue",
+            "R3",
+            "D3",
+            "p_blue",
+            "a_blue",
+            11,
+            LedPreset::blue(),
+        ),
     ]
 }
 
-fn coloured_led(reference: &str, part: &str, anode_net: &str) -> PlacedPart {
-    PlacedPart::new(reference, part, Parameters::new())
-        .terminal("a", anode_net)
-        .terminal("k", "gnd")
+/// The three channels as one SPICE deck, without the MCU drivers.
+fn deck() -> String {
+    let mut deck = String::from("three indicator LEDs\n");
+    for channel in channels() {
+        let _ = writeln!(
+            deck,
+            "{} {} {} {SERIES_OHMS}",
+            channel.resistor, channel.pin_net, channel.anode_net
+        );
+        deck.push_str(&channel.preset.cards(channel.led, channel.anode_net, "0"));
+        deck.push('\n');
+    }
+    deck
 }
 
 /// What one channel is doing at the current operating point.
@@ -108,14 +135,6 @@ pub struct LedsSim {
 impl LedsSim {
     /// Boot the firmware and wire the three channels to `D9`, `D10` and `D11`.
     pub fn boot() -> Self {
-        let netlist = Netlist::new()
-            .nets(["p_red", "p_green", "p_blue", "a_red", "a_green", "a_blue"])
-            .part(resistor("R1", SERIES_OHMS, "p_red", "a_red"))
-            .part(coloured_led("D1", "led.red", "a_red"))
-            .part(resistor("R2", SERIES_OHMS, "p_green", "a_green"))
-            .part(coloured_led("D2", "led.green", "a_green"))
-            .part(resistor("R3", SERIES_OHMS, "p_blue", "a_blue"))
-            .part(coloured_led("D3", "led.blue", "a_blue"));
         let wiring = Wiring::new()
             .bind(Pin::digital(9), "p_red")
             .bind(Pin::digital(10), "p_green")
@@ -123,7 +142,7 @@ impl LedsSim {
 
         let mut host = BreadboardHost::from_hex(FIRMWARE, Scene::empty(), Vec::new())
             .expect("leds firmware boots");
-        let coupling = AnalogCoupling::new(netlist, wiring).expect("led netlist is valid");
+        let coupling = AnalogCoupling::new(deck(), wiring).expect("led deck and wiring are valid");
         host.attach_analog(coupling).expect("pins are free");
 
         Self {
@@ -152,14 +171,15 @@ impl LedsSim {
             .analog()
             .expect("analog coupling is attached")
             .reading();
-        let point = reading.branch(channel.led);
-        let voltage = point.map_or(0.0, |point| point.voltage);
-        let current = point.map_or(0.0, |point| point.current);
+        let pin_voltage = reading.net_voltage(channel.pin_net).unwrap_or(0.0);
+        let anode_voltage = reading.net_voltage(channel.anode_net).unwrap_or(0.0);
+        // The series resistor is ideal, so its own Ohm's law *is* the LED current.
+        let current = (pin_voltage - anode_voltage) / SERIES_OHMS;
         ChannelReading {
-            voltage,
+            voltage: anode_voltage,
             current,
-            pin_voltage: reading.net_voltage(channel.pin_net).unwrap_or(0.0),
-            brightness: channel.model.brightness(current) as f32,
+            pin_voltage,
+            brightness: channel.preset.brightness(current) as f32,
         }
     }
 
@@ -204,7 +224,7 @@ impl LedsSim {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use analog_solver::Device;
+    use breadboard::spice::MODEL_THERMAL_VOLTS;
 
     /// Run the firmware to `millis` of simulated time.
     fn at(millis: f64) -> LedsSim {
@@ -213,13 +233,19 @@ mod tests {
         sim
     }
 
-    /// Independent forward voltage at `current`, by bisection on the model, so
-    /// the test does not restate the solver's arithmetic.
-    fn forward_voltage(model: &Led, current: f64) -> f64 {
+    /// Independent forward voltage at `current`, by bisection on the diode
+    /// equation the preset describes, so the test does not restate the
+    /// simulator's arithmetic.
+    fn forward_voltage(preset: &LedPreset, current: f64) -> f64 {
+        let scale = preset.ideality_factor * MODEL_THERMAL_VOLTS;
+        let diode = |voltage: f64| {
+            preset.saturation_current * ((voltage / scale).exp() - 1.0)
+                + voltage / preset.shunt_ohms
+        };
         let (mut lo, mut hi) = (0.0_f64, 5.0_f64);
         for _ in 0..200 {
             let mid = 0.5 * (lo + hi);
-            if model.evaluate(mid).expect("in range").current < current {
+            if diode(mid) < current {
                 lo = mid;
             } else {
                 hi = mid;
@@ -261,7 +287,7 @@ mod tests {
     }
 
     #[test]
-    fn each_operating_point_satisfies_ohms_law_across_its_own_resistor() {
+    fn each_operating_point_satisfies_ohms_law_and_the_diode_curve() {
         let sim = at(TOGETHER_MS);
         for (channel, reading) in sim.channels().iter().zip(sim.readings()) {
             // The driver is a 5 V source behind 25 ohm, so the pin sits below
@@ -274,20 +300,14 @@ mod tests {
                 reading.voltage
             );
             assert!(
-                (reading.current - reading.predicted_current()).abs() < 1e-6,
+                (reading.current - reading.predicted_current()).abs() < 1e-9,
                 "{}: solved {:.6} mA vs Ohm's law {:.6} mA",
                 channel.name,
                 reading.current * 1e3,
                 reading.predicted_current() * 1e3
             );
             // And the branch voltage really is the model's Vf at that current.
-            let model = Led::new(match channel.name {
-                "red" => LedParameters::red(),
-                "green" => LedParameters::green(),
-                _ => LedParameters::blue(),
-            })
-            .expect("preset is valid");
-            let expected = forward_voltage(&model, reading.current);
+            let expected = forward_voltage(&channel.preset, reading.current);
             assert!(
                 (reading.voltage - expected).abs() < 1e-6,
                 "{}: solved Vf {:.6} V vs independent bisection {:.6} V",

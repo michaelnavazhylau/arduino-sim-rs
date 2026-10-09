@@ -1,20 +1,20 @@
 # breadboard
 
 Headless host, simulated-time scheduler and external components for the native
-AVR simulator. The only dependency is the sibling
-[`rust_port`](../rust_port/) AVR core; there is no GUI or renderer here, and
-nothing in this crate is a dependency of the AVR parity gate.
+AVR simulator. It depends on the sibling [`rust_port`](../rust_port/) AVR core
+and on [ngspice-rs](https://github.com/michaelnavazhylau/ngspice-rs) for
+operating-point solves; there is no GUI or renderer here, and nothing in this
+crate is a dependency of the AVR parity gate.
 
 ## Why this crate exists
 
-A resistor or LED is a memoryless current/voltage law, which is what
-`circuit-components` provides. A **sensor is not that**: it is a stateful device
-whose output depends on *when* things happened. An HC-SR04 reports a distance by
-holding ECHO high for a specific time, so its identity is a duration, not a
-voltage.
+A resistor or LED is a memoryless current/voltage law, and a SPICE deck is the
+right home for it. A **sensor is not that**: it is a stateful device whose output
+depends on *when* things happened. An HC-SR04 reports a distance by holding ECHO
+high for a specific time, so its identity is a duration, not a voltage.
 
-Squeezing that into `analog-solver::Device` would force digital timing into an
-electrical solve. Instead this crate adds the layer the
+Squeezing that into an element of an electrical solve would force digital timing
+into a DC operating point. Instead this crate adds the layer the
 [sim2real roadmap](../docs/sim2real-roadmap.md) calls for: it owns the MCU pin
 drivers, the simulated-time event queue and the components wired to the board,
 and it depends on the AVR core rather than the other way round.
@@ -66,8 +66,8 @@ beyond range all read identically as *no echo*.
 ## Analog coupling
 
 A digital pin is not an ideal switch, and an analog input is not a number a host
-invents. `AnalogCoupling` binds named netlist nets to Uno pins and closes the
-loop in both directions:
+invents. `AnalogCoupling` binds SPICE deck nets to Uno pins and closes the loop
+in both directions:
 
 * **MCU → circuit.** Each bound pin contributes a Thevenin driver reflecting its
   current drive mode. A pin in high impedance contributes **nothing**: an
@@ -79,25 +79,41 @@ loop in both directions:
   the band is *indeterminate* and leaves the previous sample alone rather than
   rounding it to a logic level.
 
-Topology is reused: a `Low`↔`High` change only rewrites a source value, and only
-a change of *driver shape* (driven, pulled up, or absent) recompiles. A
-`DIDR0`-disabled analog pin gets no digital feedback, as on real silicon.
+The circuit is a **SPICE deck**, solved by
+[`spice::solve_op`](src/spice.rs), which parses it with ngspice-rs, runs a `.op`
+analysis and reads node voltages and voltage-source currents back by name. Only
+`.op` is used, so the host stays DC-only. A `Low`↔`High` change, a driver *shape*
+change (driven, pulled up, or absent), or a switch toggle marks the operating
+point stale and re-solves it once; an unchanged drive mode is a cache hit and
+costs no simulator work. A `DIDR0`-disabled analog pin gets no digital feedback,
+as on real silicon.
 
 ```rust
-use breadboard::netlist::{led, resistor};
-use breadboard::{AnalogCoupling, Netlist, Pin, Wiring};
+use breadboard::{AnalogCoupling, LedPreset, Pin, Wiring};
 
-let netlist = Netlist::new()
-    .nets(["d9", "led_a"])
-    .part(resistor("R1", 220.0, "d9", "led_a"))
-    .part(led("D1", "led_a", "gnd"));
-let coupling = AnalogCoupling::new(netlist, Wiring::new().bind(Pin::digital(9), "d9"))
+let deck = format!(
+    "led\nR1 d9 led_a 220\n{}",
+    LedPreset::red().cards("D1", "led_a", "0")
+);
+let coupling = AnalogCoupling::new(deck, Wiring::new().bind(Pin::digital(9), "d9"))
     .expect("valid coupling");
 ```
 
-A netlist that has no unique solution — a divider feeding nothing, for instance —
-reports `CouplingOutcome::Indeterminate` with the solver error preserved, rather
-than fabricating a voltage.
+ngspice-rs exposes node voltages and voltage-source currents, not per-device
+parameters (`@d1[id]` is explicitly unported), so a two-terminal branch current
+is derived from the ideal series resistor's own Ohm's law. To observe an element
+whose current cannot be derived that way, put a 0 V source in series with it and
+read `AnalogReading::source_current`.
+
+A switch is declared rather than written: `bind_switch("SW1", "btn", "gnd")`
+appends one resistor whose value is the contact or insulation resistance, so
+throwing it is a value change rather than a topology edit.
+
+A deck whose nets have no DC path to ground reports
+`CouplingOutcome::Indeterminate(OpError::FloatingNets(..))`. ngspice would still
+return a number by regularising the node with `gmin`, which would turn an
+undriven net into a plausible-looking voltage, so the coupling reports the
+operating point as undetermined instead of fabricating one.
 
 ## Components
 
@@ -173,12 +189,13 @@ host (see `SpiRegisterMap::end_transaction`) or by a GPIO used as CS.
 
 * Analog coupling is **DC only**. There is no transient integration, so no RC
   charging, no PWM low-pass averaging, no startup behaviour and no
-  sample-and-hold timing. The MCU driver impedances (25 Ω output, 30 kΩ pull-up)
-  are illustrative, not measured ATmega328P pad characteristics.
+  sample-and-hold timing, even though ngspice-rs can integrate transients. The
+  MCU driver impedances (25 Ω output, 30 kΩ pull-up) are illustrative, not
+  measured ATmega328P pad characteristics.
 * `HcSr04` is the only modelled *sensor*. The bus devices are register-file
   models, not fitted parts, and no part has been characterised against hardware.
-* Components are attached in code. The netlist is data, but there is no netlist
-  file format and no schematic-to-model binding.
+* Components are attached in code. Circuits are SPICE deck text, but there is no
+  netlist file format and no schematic-to-model binding.
 * Timing values are illustrative, and this is not a hardware safety or design
   validator.
 
@@ -188,12 +205,19 @@ host (see `SpiRegisterMap::end_transaction`) or by a GPIO used as CS.
 bash breadboard/tools/verify-breadboard.sh
 ```
 
+The script fetches ngspice-rs from the package index on a cold registry, so it is
+no longer an `--offline` gate. It runs `fmt`, `clippy -D warnings` and the full
+test suite in debug and release.
+
 * `tests/ultrasonic.rs` runs a genuinely assembled AVR program and drives TRIG by
   writing the same registers a sketch would; pulse widths are compared against an
   independently recomputed time of flight.
 * `tests/analog.rs` drives pins through `DDR`/`PORT` and checks the solved
   operating point against the published hand-wired values, the threshold band,
   and a real ADC conversion (2.5 V of a 5 V reference reads 512 counts).
+* `tests/switches.rs` throws a switch in both wirings and checks the two read
+  opposite levels, against independently computed dividers rather than the
+  simulator's own answer.
 * `tests/bus.rs` runs the TWI and SPI state machines at register level and
   checks addressing, ACK/NACK, auto-increment and register round-trips.
 

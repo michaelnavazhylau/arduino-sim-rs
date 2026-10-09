@@ -10,18 +10,18 @@
 //! | simple | `D2` to GND | `INPUT_PULLUP` | HIGH | LOW |
 //! | inverse | `D2` to 5 V, 10 k to GND | `INPUT` | LOW | HIGH |
 //!
-//! Both circuits are netlists driven through `breadboard`'s `AnalogCoupling`, so
-//! the pin level is a solved node voltage rather than an asserted boolean, and
-//! the switch is thrown through [`AnalogCoupling::set_switch`].
+//! Both circuits are **SPICE decks** driven through `breadboard`'s
+//! `AnalogCoupling`, so the pin level is a solved node voltage rather than an
+//! asserted boolean, and the switch is thrown through
+//! [`AnalogCoupling::set_switch`].
 //!
 //! Nothing here knows about rendering, so the electrical result is testable
 //! without a display.
 
-use breadboard::netlist::{resistor, switch, vsource, Netlist, Parameters, PlacedPart};
 use breadboard::{
-    AnalogCoupling, BreadboardHost, CouplingOutcome, Pin, Scene, Wiring as PinWiring,
+    AnalogCoupling, BreadboardHost, CouplingOutcome, LedPreset, Pin, Scene, Wiring as PinWiring,
 };
-use circuit_components::{Led, LedParameters};
+use std::fmt::Write as _;
 
 const PULL_UP_FIRMWARE: &str = include_str!("../firmware/switch_pullup.hex");
 const PULL_DOWN_FIRMWARE: &str = include_str!("../firmware/switch_pulldown.hex");
@@ -36,9 +36,9 @@ pub const SERIES_OHMS: f64 = 330.0;
 pub const PULLDOWN_OHMS: f64 = 10_000.0;
 /// The 5 V rail the inverse wiring switches to.
 pub const SUPPLY_VOLTS: f64 = 5.0;
-/// Netlist reference of the button, so the host can throw it.
+/// Reference of the button, so the host can throw it.
 pub const SWITCH_REFERENCE: &str = "SW1";
-/// Netlist reference of the indicator LED.
+/// Reference designator of the indicator LED.
 pub const LED_REFERENCE: &str = "D1";
 
 /// Which way the button is wired.
@@ -80,6 +80,14 @@ impl Wiring {
         self == Self::PullUp
     }
 
+    /// The net the button's other contact reaches.
+    fn switch_net(self) -> &'static str {
+        match self {
+            Self::PullUp => "gnd",
+            Self::PullDown => "vcc",
+        }
+    }
+
     fn firmware(self) -> &'static str {
         match self {
             Self::PullUp => PULL_UP_FIRMWARE,
@@ -88,37 +96,42 @@ impl Wiring {
     }
 }
 
-fn red_led(reference: &str, anode_net: &str) -> PlacedPart {
-    PlacedPart::new(reference, "led.red", Parameters::new())
-        .terminal("a", anode_net)
-        .terminal("k", "gnd")
+/// The indicator LED and its series resistor, shared by both wirings.
+fn led_body() -> String {
+    let mut body = String::new();
+    let _ = writeln!(body, "R1 d9 led_a {SERIES_OHMS}");
+    body.push_str(&LedPreset::red().cards(LED_REFERENCE, "led_a", "0"));
+    body.push('\n');
+    body
 }
 
-/// The two switch wires, as a netlist.
-fn netlist(wiring: Wiring) -> Netlist {
+/// The two switch wirings, as SPICE decks without their switch.
+fn deck(wiring: Wiring) -> String {
+    let mut deck = String::new();
     match wiring {
-        Wiring::PullUp => Netlist::new()
-            .nets(["btn", "d9", "led_a"])
-            .part(switch(SWITCH_REFERENCE, "btn", "gnd"))
-            .part(resistor("R1", SERIES_OHMS, "d9", "led_a"))
-            .part(red_led(LED_REFERENCE, "led_a")),
-        Wiring::PullDown => Netlist::new()
-            .nets(["btn", "d9", "led_a", "vcc"])
+        Wiring::PullUp => {
+            // No static part on `btn` at all: the AVR's internal pull-up is the
+            // MCU driver and the switch is the only other element, both
+            // supplied by the coupling.
+            deck.push_str("switch pull-up\n");
+            deck.push_str(&led_body());
+        }
+        Wiring::PullDown => {
             // The board's 5 V rail, modelled as an ideal source: the regulator's
             // output impedance and current limit are not represented.
-            .part(vsource("M5V", SUPPLY_VOLTS, "vcc", "gnd"))
-            .part(switch(SWITCH_REFERENCE, "btn", "vcc"))
-            .part(resistor("R2", PULLDOWN_OHMS, "btn", "gnd"))
-            .part(resistor("R1", SERIES_OHMS, "d9", "led_a"))
-            .part(red_led(LED_REFERENCE, "led_a")),
+            let _ = writeln!(deck, "switch pull-down\nV1 vcc 0 {SUPPLY_VOLTS}");
+            let _ = writeln!(deck, "R2 btn 0 {PULLDOWN_OHMS}");
+            deck.push_str(&led_body());
+        }
     }
+    deck
 }
 
 /// One switch demo's board and circuit.
 pub struct SwitchSim {
     host: BreadboardHost,
     wiring: Wiring,
-    model: Led,
+    preset: LedPreset,
 }
 
 impl SwitchSim {
@@ -129,17 +142,16 @@ impl SwitchSim {
             .bind(Pin::digital(LED_PIN), "d9");
         let mut host = BreadboardHost::from_hex(wiring.firmware(), Scene::empty(), Vec::new())
             .expect("switch firmware boots");
-        let mut coupling =
-            AnalogCoupling::new(netlist(wiring), pins).expect("switch netlist is valid");
+        let mut coupling = AnalogCoupling::new(deck(wiring), pins).expect("switch deck is valid");
         coupling
-            .bind_switch(SWITCH_REFERENCE)
-            .expect("SW1 is a switch");
+            .bind_switch(SWITCH_REFERENCE, "btn", wiring.switch_net())
+            .expect("SW1 binds");
         host.attach_analog(coupling).expect("pins are free");
 
         Self {
             host,
             wiring,
-            model: Led::new(LedParameters::red()).expect("documented preset is valid"),
+            preset: LedPreset::red(),
         }
     }
 
@@ -148,7 +160,7 @@ impl SwitchSim {
         self.wiring
     }
 
-    /// Press or release the button. The topology recompiles on the next advance.
+    /// Press or release the button. The next solve picks the new state up.
     pub fn set_pressed(&mut self, pressed: bool) {
         assert!(
             self.host
@@ -192,22 +204,24 @@ impl SwitchSim {
     }
 
     /// Solved forward current through the indicator LED.
+    ///
+    /// ngspice does not expose `@d1[id]`, so the current comes from Ohm's law
+    /// across the ideal series resistor rather than from the diode.
     pub fn led_current(&self) -> f64 {
-        self.reading()
-            .branch(LED_REFERENCE)
-            .map_or(0.0, |point| point.current)
+        let reading = self.reading();
+        let pin = reading.net_voltage("d9").unwrap_or(0.0);
+        let anode = reading.net_voltage("led_a").unwrap_or(0.0);
+        (pin - anode) / SERIES_OHMS
     }
 
-    /// Solved forward voltage across the indicator LED.
+    /// Solved forward voltage across the indicator LED, anode to cathode.
     pub fn led_voltage(&self) -> f64 {
-        self.reading()
-            .branch(LED_REFERENCE)
-            .map_or(0.0, |point| point.voltage)
+        self.reading().net_voltage("led_a").unwrap_or(0.0)
     }
 
     /// Rendering brightness from the LED model's own current mapping.
     pub fn led_brightness(&self) -> f32 {
-        self.model.brightness(self.led_current()) as f32
+        self.preset.brightness(self.led_current()) as f32
     }
 
     /// Whether the LED is carrying meaningful forward current.
@@ -357,7 +371,7 @@ mod tests {
     }
 
     #[test]
-    fn idle_frames_reuse_the_solved_topology() {
+    fn idle_frames_reuse_the_solved_operating_point() {
         let mut sim = SwitchSim::boot(Wiring::PullUp);
         sim.advance_until_settled();
         let settled = sim.solves();
@@ -369,10 +383,9 @@ mod tests {
         }
         assert_eq!(sim.solves(), settled, "idle frames must be cached");
 
-        // Pressing moves two things: the switch recompiles, and the firmware then
-        // drives the LED to the other level, which is a source update rather than
-        // a recompile because the driver's shape is unchanged. So the count rises
-        // by a small bounded amount, not once per simulated frame.
+        // Pressing moves two things: the switch state and then the LED the
+        // firmware drives in response, so the count rises by a small bounded
+        // amount rather than once per simulated frame.
         sim.set_pressed(true);
         sim.advance_until_settled();
         let after_press = sim.solves();

@@ -8,5 +8,7 @@ publish = false
 
 [dependencies]
 avr-port-tests = { path = "../rust_port" }
-analog-solver = { path = "../analog-solver" }
-circuit-components = { path = "../circuit-components" }
+# The electrical backend: a from-scratch Rust port of ngspice. Pure Rust, no C
+# toolchain and no FFI. It brings in diffsol/faer for its sparse linear algebra,
+# so this crate is no longer buildable --offline on a cold registry.
+ngspice-rs = "0.1"

@@ -27,7 +27,7 @@ pub struct Sim {
     board: Board,
     instructions: u64,
     toggles: u64,
-    /// Onboard digital indicator (not part of the external analog netlist).
+    /// Onboard digital indicator (not part of the external circuit deck).
     pub led_on: bool,
     pub analog: BlinkCircuit,
 }
@@ -149,7 +149,7 @@ mod tests {
     fn compiled_blink_drives_current_and_reverse_polarity_is_independent_of_gpio() {
         let mut sim = Sim::boot();
         assert_eq!(sim.analog.state(), PinState::Input);
-        assert_eq!(sim.analog.brightness(), 0.0);
+        assert!(sim.analog.brightness() < 1e-9, "gmin leakage only");
         sim.advance(2_000_000);
         assert!(sim.led_on);
         assert_eq!(sim.analog.state(), PinState::High);
@@ -158,14 +158,14 @@ mod tests {
         sim.toggle_led_polarity();
         assert_eq!(sim.cycles(), cycles); // Rewire while paused.
         assert!(sim.led_on); // Onboard indicator still high.
-        assert_eq!(sim.analog.brightness(), 0.0);
+        assert!(sim.analog.brightness() < 1e-9, "gmin leakage only");
         assert!(sim.analog.reading.as_ref().unwrap().led.voltage < -4.99);
         sim.toggle_led_polarity();
         assert!(sim.analog.brightness() > 0.5);
         sim.advance(8_000_000);
         assert!(!sim.led_on);
         assert_eq!(sim.analog.state(), PinState::Low);
-        assert_eq!(sim.analog.brightness(), 0.0);
+        assert!(sim.analog.brightness() < 1e-9, "gmin leakage only");
         sim.advance(8_000_000);
         assert!(sim.led_on);
         assert!(sim.analog.brightness() > 0.5);

@@ -33,15 +33,13 @@ For an existing clone, initialize the reference with
   resistors turn out to be a different operating point on red, green and blue.
   Kept outside `rust_port` so the core stays dependency-free and the offline
   parity gate is unaffected.
-- [`analog-solver/`](analog-solver/): independent, dependency-free nonlinear DC
-  MNA solver (node voltages, signed branch currents and power).
-- [`circuit-components/`](circuit-components/): resistor, directional Shockley LED
-  and switch models, plus a declarative netlist format and part catalogue,
-  depending only on `analog-solver`; includes a headless example.
 - [`breadboard/`](breadboard/): headless host, simulated-time event scheduler,
   analog pin/ADC coupling, I2C and SPI device attachment, and external components
-  (an HC-SR04 ultrasonic distance sensor) wired to a real AVR board. Depends on
-  `rust_port`; nothing in the parity core depends on it.
+  (an HC-SR04 ultrasonic distance sensor) wired to a real AVR board. Electrical
+  circuits are SPICE decks solved by
+  [ngspice-rs](https://github.com/michaelnavazhylau/ngspice-rs), a from-scratch
+  Rust port of ngspice with no FFI. Depends on `rust_port`; nothing in the parity
+  core depends on it.
 - [`avr8js/`](avr8js/): upstream reference submodule pinned at
   `bee6f0a94e0e27786f6bc21aee3c775849fb50fd`.
 
@@ -68,23 +66,23 @@ advances one instruction plus its peripheral tick. [`blink-gui/`](blink-gui/)
 is a worked example — a raylib window with a schematic view and a procedural 3D
 board. `PORTB5` drives a finite-impedance source feeding a 220 Ω resistor and
 LED; the external LED's brightness follows solved forward current, and reversing
-it blocks conduction. The UI shows voltage/current/power. This is a nonlinear DC
-model, not transient SPICE or an active current regulator. Verify the separate
-electrical libraries with `bash analog-solver/tools/verify-analog.sh`.
+it blocks conduction. The UI shows voltage/current/power. The operating point is
+a `.op` solve by ngspice-rs — nonlinear DC, not transient SPICE and not an
+active current regulator.
 The GUI crate links a system raylib and is
 intentionally not part of the offline CI gate; see its README for requirements,
 for why raylib cannot load STL, and for the `nobuild` camera-module caveat.
 
 [`breadboard/`](breadboard/) is the headless counterpart for **time, analog
 coupling and buses**: it owns simulated-time scheduling, external components, a
-netlist-driven analog loop that drives `PINx` and the ADC from solved node
+deck-driven analog loop that drives `PINx` and the ADC from solved node
 voltages, and I2C/SPI devices attached through the core's own callback surface.
 An HC-SR04 demonstrates a sensor whose ECHO pulse is produced at cycle
 granularity and read back through the AVR's `PINx` register; a sensor is a
 stateful device whose output depends on *when* things happened, so it implements
-a `Stimulus` rather than `analog_solver::Device`, keeping digital timing out of
-the electrical solve. The analog loop is **DC only** (no RC transients), SPI has
-no chip-select because the core does not model `SS`, and I2C is master-only.
+a `Stimulus` rather than an element in a SPICE deck, keeping digital timing out
+of the electrical solve. The analog loop is **DC only** (no RC transients), SPI
+has no chip-select because the core does not model `SS`, and I2C is master-only.
 Verify it with `bash breadboard/tools/verify-breadboard.sh`.
 
 [`blink-gui/`](blink-gui/) shows that same sensor: the HC-SR04 sketch times ECHO
@@ -107,10 +105,12 @@ are excluded from Git; their pinned provenance and fetch/check tools are include
 ## Future electrical simulation work
 
 The [sim2real implementation roadmap](docs/sim2real-roadmap.md) records the planned
-path from today's nonlinear DC demo to backward-Euler RC/RL transients,
+path from today's DC operating points to backward-Euler RC/RL transients,
 BJT/MOSFET models, deterministic AVR/analog time coupling, practical parasitics,
-tolerances and temperature. It includes architecture boundaries and acceptance
-criteria; these are future capabilities, not current feature claims.
+tolerances and temperature. ngspice-rs already supplies the device models and the
+transient integrator on the electrical side; what remains is host-side causal
+AVR/analog synchronization and a deck-level part catalogue with provenance.
+These are future capabilities, not current feature claims.
 
 ## License and citation
 

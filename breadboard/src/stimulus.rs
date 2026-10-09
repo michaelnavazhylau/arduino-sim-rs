@@ -4,9 +4,9 @@
 //!
 //! A [`Stimulus`] is anything wired to the MCU that has behaviour over time:
 //! a sensor, a switch, a display, a second MCU. It is deliberately *not* an
-//! [`analog_solver::Device`](https://docs.rs/analog-solver): a distance sensor
-//! is not a two-terminal current/voltage law, and pretending it is would force
-//! digital timing into the electrical solver.
+//! electrical device in a SPICE deck: a distance sensor is not a two-terminal
+//! current/voltage law, and pretending it is would force digital timing into the
+//! electrical solve.
 //!
 //! The host owns the timeline. A stimulus may only (a) observe the pins it
 //! declares, (b) report the drive it wants on the pins it declares, and

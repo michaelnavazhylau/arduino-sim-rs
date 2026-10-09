@@ -12,7 +12,7 @@
 //! Model scale is 1.0 = 10 mm, so a 68.6 x 53.4 mm Uno PCB is 6.86 x 5.34 and
 //! header pitch is 2.54 mm = 0.254. Component placement is approximate but
 //! recognisable. The onboard LED remains a digital indicator; the external LED
-//! uses the analog solver's forward current and independently reversible polarity.
+//! uses the solved forward current and independently reversible polarity.
 
 use crate::{circuit3d, shading};
 use raylib::prelude::*;

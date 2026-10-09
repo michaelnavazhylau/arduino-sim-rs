@@ -1,387 +1,211 @@
 # Arduino/breadboard sim2real implementation roadmap
 
-**Status: proposed future work.** This document records the direction and
-acceptance criteria; it does not imply the features below are implemented.
+**Status: mixed.** The electrical engine decision below is implemented. The
+host-side coupling, model-provenance and fidelity work is **proposed future
+work** and is not implied to exist.
 
-## Goal and architectural principle
+## Decision: ngspice-rs owns the electrical engine
 
-Target Arduino/ELEGOO-style breadboard circuits, not industrial SPICE accuracy:
+The electrical side of this project is delegated to
+[ngspice-rs](https://github.com/michaelnavazhylau/ngspice-rs), a from-scratch
+Rust port of ngspice with no C dependency and no FFI. It supplies the netlist
+front end, MNA assembly, Newton convergence with continuation, diode/BJT/MOS1
+models and the `.op`/`.dc`/`.ac`/`.tran` drivers. Reimplementing those here was
+the original plan; it is no longer the direction.
 
-> MNA + Newton–Raphson + backward-Euler transient integration + moderately
-> realistic diode/LED, BJT and MOSFET models, with source impedance and tolerances.
+That division leaves this repository owning the parts ngspice-rs cannot know
+about:
 
-**Nonlinear DC solving is necessary, but not sufficient for sim2real.** Nonlinear
-solving handles nonlinear device equations; transient integration handles
-memory/energy-storage devices. A circuit containing both needs a nonlinear solve
-inside each transient timestep, plus models appropriate to the operating range.
-Matching a numerical reference alone does not establish hardware fidelity.
+- the AVR core and its **simulated cycle time**;
+- the board's pin drivers, rails, thresholds and ADC rules;
+- the **causal** bridge between AVR cycle time and electrical time;
+- component provenance, pinout and honest model limits;
+- rendering and result presentation.
 
-Prioritize RC charging/discharging, diode/LED behavior, transistor switching,
-finite source impedance and component variation before detailed semiconductor
-physics. The current resistor limits current; an active voltage/current regulator
-would require its own device/control model and operating limits.
+The architectural principle is therefore:
 
-## Current baseline — implemented, not a future promise
+> Delegate device equations, nonlinear solving and integration to ngspice-rs.
+> Own the *causal* AVR/analog coupling, the board model and the provenance.
+> Never let rendering cadence drive electrical time.
+
+Prioritize, in order: deterministic AVR/analog time coupling, then board/part
+profiles with real provenance, then parasitics/tolerances, then temperature,
+then analysis breadth in the GUI. Semiconductor physics is no longer on the
+critical path.
+
+## Current baseline — implemented
 
 | Area | Current implementation | Missing capability |
 | --- | --- | --- |
-| Linear MNA | Nonground node voltages, voltage-source current unknowns, ideal independent voltage/current sources, dense row-equilibrated partial-pivot elimination | Controlled sources, generalized multi-terminal stamps, reusable compiled topology |
-| Nonlinear DC | Two-terminal `Device::evaluate(V)` returning current and analytic conductance; Newton with voltage-step limiting and residual backtracking | Transistor models, warm-start API, source/gmin continuation |
-| Components | Ohmic resistor; illustrative red Shockley LED with explicit leakage shunt; declarative [`Netlist`](../circuit-components/src/netlist.rs) with named terminals and a `PartRegistry` | Calibrated part models, capacitors, inductors, BJTs, MOSFETs, temperature evolution |
-| Diagnostics | Signed branch voltage/current/power; KCL/source-voltage residuals; singular/nonfinite/nonconvergence errors | Per-device limiting diagnostics, transient error estimates and rejection history |
-| AVR coupling | Netlist-driven DC coupling in [`analog.rs`](../breadboard/src/analog.rs): a Thevenin driver per bound pin, topology reuse across `Low`/`High`, solved node voltages pushed to the ADC mux channels; the GUI still owns its own fixed netlist | Timestamped pin events, transient synchronization, sample-and-hold/impedance effects, loaded output readback |
-| Input feedback | Resolved pad voltages feed `PINx` through AVR thresholds; the indeterminate band retains the previous sample; `DIDR0` is honoured | Explicit board-specific threshold/hysteresis profiles and crossing-time handling |
+| Electrical engine | [`ngspice-rs`](https://github.com/michaelnavazhylau/ngspice-rs) 0.1, called through [`breadboard/src/spice.rs`](../breadboard/src/spice.rs): deck in, `.op` solved, node voltages and source currents out | Deck-level part catalogue, transient drives, `@device` observability (unported upstream) |
+| Undetermined circuits | Nets with no DC path to ground are detected topologically and reported as `OpError::FloatingNets`, so `gmin` cannot pass an undriven net off as a voltage | Richer convergence diagnostics from the engine |
+| LED model | A SPICE diode (`IS`, `N`) plus an explicit 1 TΩ shunt, at a circuit temperature that reproduces the project's illustrative 25.85 mV thermal voltage, in [`breadboard/src/led.rs`](../breadboard/src/led.rs) | Fitted colour-bin data and a documented validity range |
+| AVR coupling | [`breadboard/src/analog.rs`](../breadboard/src/analog.rs): a Thevenin driver per bound pin, a declared switch as one finite-resistance element, solved node voltages pushed to the ADC mux channels, cached operating points | Timestamped pin events, transient synchronization, sample-and-hold/impedance effects, loaded output readback |
+| Input feedback | Resolved pad voltages feed `PINx` through AVR thresholds; the indeterminate band retains the previous sample; `DIDR0` is honoured | Board-specific threshold/hysteresis profiles and crossing-time handling |
 | Buses | [`bus.rs`](../breadboard/src/bus.rs): I2C master with addressable Rust slaves and real ACK/NACK, plus a single SPI device; core status codes, interrupts and timing are unchanged | Multi-master arbitration, clock stretching, SPI framing/chip-select, transfers paced by real bus rates |
+| GUI | [`blink-gui/`](../blink-gui/) observes accepted operating points only; rendering never triggers a solve | Transient waveforms, AC sweeps |
 
 Source of truth:
 
-- [`analog-solver/src/lib.rs`](../analog-solver/src/lib.rs)
-- [`circuit-components/src/lib.rs`](../circuit-components/src/lib.rs)
-- [`blink-gui/src/analog.rs`](../blink-gui/src/analog.rs)
-- [`blink-gui/src/sim.rs`](../blink-gui/src/sim.rs)
+- [`breadboard/src/spice.rs`](../breadboard/src/spice.rs) (deck ↔ solve ↔ results)
+- [`breadboard/src/analog.rs`](../breadboard/src/analog.rs) (deck ↔ pin/ADC coupling)
+- [`breadboard/src/led.rs`](../breadboard/src/led.rs) (illustrative LED presets)
 - [`breadboard/src/host.rs`](../breadboard/src/host.rs) (digital external-event coupling)
-- [`breadboard/src/analog.rs`](../breadboard/src/analog.rs) (netlist ↔ pin/ADC coupling)
-- [`breadboard/src/bus.rs`](../breadboard/src/bus.rs) (I2C/SPI device attachment)
-- [`circuit-components/src/netlist.rs`](../circuit-components/src/netlist.rs)
 - [`breadboard/src/scheduler.rs`](../breadboard/src/scheduler.rs)
+- [`breadboard/src/bus.rs`](../breadboard/src/bus.rs) (I2C/SPI device attachment)
 - [`breadboard/src/ultrasonic.rs`](../breadboard/src/ultrasonic.rs)
+- [`blink-gui/src/analog.rs`](../blink-gui/src/analog.rs)
 
 Existing gates:
 
 ```sh
-bash analog-solver/tools/verify-analog.sh
 bash rust_port/tools/verify-native.sh
 bash breadboard/tools/verify-breadboard.sh
 ```
 
-Keep the present forward/reverse LED, independent scalar-root, derivative,
-KCL/KVL/power, solver-failure and compiled-Blink tests as regression fixtures.
-The default LED parameters and GPIO resistance are illustrative, not measured
-ATmega328P or commercial LED characterizations.
+Keep the solved forward/reverse LED operating points, the Ohm's-law and diode
+curve cross-check, the switch divider predictions, the threshold band and the
+compiled-firmware tests as regression fixtures. The default LED parameters and
+GPIO resistance are illustrative, not measured ATmega328P or commercial LED
+characterizations.
 
-## Crate boundaries and proposed architecture
+## Boundaries
 
-Preserve the dependency-free AVR parity core and its offline gate:
-
-- **`analog-solver`** owns topology, unknown allocation, matrix assembly, linear
-  algebra, Newton convergence, analysis sessions and time integration.
-- **`circuit-components`** owns electrical constitutive laws, derivatives,
-  charges/fluxes, validated parameters, model metadata and component defaults.
-  No renderer or AVR dependencies.
-- **Host/board adapter** owns MCU pin drivers, board rails, threshold/ADC rules,
-  timestamped external events and analog/digital synchronization. It is now
-  [`breadboard/`](../breadboard/): simulated-time scheduling in AVR cycles,
-  multi-driver pin resolution, netlist-driven DC pin/ADC coupling, I2C/SPI device
-  attachment, an HC-SR04 component and a headless run loop. `blink-gui` remains
-  the GUI consumer. Transient analog coupling, board rails and measured driver
-  impedances are still unimplemented there. Do not move electrical dependencies
-  into `rust_port`.
-- **GUI** observes accepted simulation snapshots and sends configuration/input
+- **`rust_port`** keeps an empty `[dependencies]` table and its offline parity
+  gate. Nothing electrical may move into it.
+- **`breadboard`** owns MCU pin drivers, board rails, threshold/ADC rules,
+  timestamped external events and the analog/digital bridge. It owns the only
+  ngspice-rs dependency.
+- **`blink-gui`** observes accepted snapshots and sends configuration/input
   events. Rendering frames must not determine electrical integration steps.
+- **ngspice-rs** is not vendored or wrapped in a second abstraction that
+  pretends to be a general simulator: decks are the interface, and what it does
+  not support is reported rather than approximated.
 
-Conceptual analysis pipeline (not an already implemented API):
+## Milestone 1 — deterministic AVR/analog time coupling
 
-```text
-Circuit definition + device parameters
-                  |
-         compile topology/unknowns
-                  |
-          device model evaluation
-                  |
-      +-----------+------------------+
-      |           |                  |
-      DC          transient          AC small signal (later)
-      |           |                  |
-      |      integration/history     linearize at a DC bias
-      |           |                  |
-      +---- reusable Newton -----+   complex linear solve
-                  |              |
-          linear matrix solve    |
-                  |              |
-        accepted operating point / waveform / diagnostics
-```
+The 32-instruction polling and render-frame pacing are adequate for Blink but
+cannot be the timing contract for short pulses, PWM, RC threshold crossings or
+ADC acquisition. This is the hard part of the remaining work, and it is required
+regardless of which engine integrates the circuit.
 
-Before transistors/dynamics, replace the strictly two-terminal interface with a
-model/stamping contract that can declare terminals, additional branch/internal
-unknowns, terminal-current residuals, their full Jacobian and dynamic charge/flux
-contributions. MOSFET gate dependence and BJT base/collector dependence require
-cross-terminal derivatives; transistor Jacobians need not be symmetric.
-Retain a two-terminal convenience adapter for existing resistors and LEDs.
-
-**Partly done:** [`netlist.rs`](../circuit-components/src/netlist.rs) already
-carries an ordered *terminal list* per part, resolves connections by terminal
-name, and lets `Part::stamp` allocate internal branch nodes (used by the host's
-`mcu.driver`). What remains is the electrical side: `analog_solver::Device` is
-still a memoryless two-terminal `I(V)` law, so a part cannot yet declare extra
-unknowns or a full cross-terminal Jacobian.
-
-Keep immutable circuit/model parameters separate from **committed analysis
-state** and **trial Newton/timestep state**. Device evaluation during Newton is
-side-effect-free: failed iterations cannot change capacitor charge, inductor
-current, temperature history or committed simulation time.
-
-## Milestone 1 — generalize linear MNA and device stamps
-
-- [ ] Separate unknown allocation/topology compilation, residual/Jacobian
-  assembly and the linear solve from the current DC loop.
-- [ ] Add VCCS, VCVS, CCCS and CCVS controlled sources with documented polarity,
-  control references and any required sensing/branch-current unknowns.
-- [ ] Introduce multi-terminal stamps and circuit-local validated identities;
-  detect invalid references and explain singular/contradictory constraints.
-- [ ] Reuse compiled topology and matrix storage across solves. Keep dense
-  elimination initially; add sparse backends only after circuit-size profiling.
-- [ ] Make voltage/current unknown scaling and pivot/conditioning diagnostics
-  explicit; do not assume a symmetric matrix.
-
-**Acceptance:** analytical resistor/source and controlled-source networks match;
-branch orientation, KCL/KVL and power conventions remain consistent; floating
-nodes and contradictory ideal sources fail explicitly. Existing DC APIs retain
-an adapter or have a documented migration, with no AVR core dependency changes.
-
-## Milestone 2 — reusable nonlinear solving and robust diode bias points
-
-- [ ] Extract Newton into a reusable kernel for DC and timestep equations, with
-  initial guesses/warm starts, tolerances, iteration limits and diagnostics.
-- [ ] Preserve analytic Jacobians, voltage limiting and residual backtracking;
-  test terminal derivatives by independent finite differences.
-- [ ] Add optional source stepping and gmin stepping for difficult bias points.
-  Record continuation settings and intermediate failures. These are numerical
-  aids, not undocumented physical resistors.
-- [ ] After continuation, verify the **original requested circuit** at its actual
-  sources and without artificial gmin. Never report success for only a modified
-  circuit. Keep real modeled leakage separate from numerical regularization.
-- [ ] Report model validity/overflow and distinguish singular topology from
-  exhausted nonlinear convergence. Multiple operating points remain possible.
-
-**Acceptance:** diode/LED sweeps and harder nonlinear networks converge within
-residual tolerances or return reproducible errors; independent roots/reference
-solutions agree. No small-step-only convergence or silent current/voltage clamp.
-
-## Milestone 3 — backward-Euler transient RC/RL/RLC behavior
-
-This is the first major sim2real vertical slice: **charging is not a sequence of
-DC cache hits**, even when the AVR output never changes.
-
-At DC steady state, a capacitor is open and an ideal inductor is a zero-voltage
-branch (not a zero-ohm resistor). DC initialization alone cannot predict startup,
-filtering, delays or oscillation.
-
-For a capacitor oriented p → n:
-
-\[
-I_C=C\frac{dV}{dt},\qquad
-I_{C,n}=\frac{C}{\Delta t}(V_n-V_{n-1}).
-\]
-
-The backward-Euler companion stamp has conductance \(G=C/\Delta t\) and a
-history current source \(I_h=-G V_{n-1}\), oriented p → n. Thus
-\(I_{C,n}=G V_n+I_h\). Freeze accepted history throughout all Newton iterations.
-
-For an inductor, add a branch-current unknown and enforce:
-
-\[
-V_n=\frac{L}{\Delta t}(I_n-I_{n-1}).
-\]
-
-This is an MNA branch equation, not a capacitor-style conductance substitution.
-General nonlinear charge models later use the form
-\(F(x,t)+[Q(x_n)-Q(x_{n-1})]/\Delta t=0\), with the charge Jacobian included
-in Newton. A constant capacitance is the first implementation, not the limit
-of the interface.
-
-- [ ] Add capacitor voltage/charge and inductor current/flux histories,
-  consistent signed companion stamps and transient source waveforms.
-- [ ] Define initialization modes: DC operating point where one exists, or
-  explicit capacitor voltages/inductor currents with consistent constraints.
-  An optional supply ramp is a distinct stimulus, not an implicit assumption.
-- [ ] Start with fixed-step backward Euler and a resumable transient session.
-  Initialize Newton from the last accepted state; reuse Milestone 2 inside
-  **every** timestep, including steps with unchanged GPIO.
-- [ ] Add min/max timestep, growth/shrink bounds, maximum retries and an error
-  estimate (e.g. one full step versus two half steps), separate from Newton's
-  equation-residual convergence criterion.
-- [ ] On failure or excessive estimated integration error, discard trial state,
-  reduce the timestep and retry; never advance committed time on rejection.
-- [ ] Stop at scheduled source discontinuities and requested sample times.
-  Retain accepted time/step/error/Newton diagnostics for replay.
-- [ ] Consider trapezoidal integration only after backward Euler is validated;
-  document its numerical-ringing tradeoff and discontinuity restart policy.
-
-**Acceptance:**
-
-- RC charge/discharge matches \(V_C(t)=V_S(1-e^{-t/RC})\) for a zero-initial-voltage
-  step, and the corresponding exponential discharge. At fixed step
-  \(\Delta t\le RC/100\), sampled voltage error should be below 0.5% of the source
-  step amplitude at \(RC\) and \(5RC\); halving the step demonstrates first-order
-  convergence. This is an initial numerical fixture, not a hardware guarantee.
-- RL current matches \(I_L(t)=(V_S/R)(1-e^{-tR/L})\); RLC behavior distinguishes
-  physical damping from backward-Euler numerical damping under step refinement.
-- Initial conditions, long constant-input runs and history-source polarity are
-  correct. KCL/KVL hold at accepted steps. Stored-energy behavior is physically
-  sensible; do not demand exact continuous-time energy conservation from a
-  dissipative discretization such as backward Euler.
-- Forced failures, adaptive-step rejection and full-step/two-half-step error
-  trials leave committed histories/time untouched. Replaying the same settings
-  produces the same accepted trace.
-
-## Milestone 4 — transistor operating points and nonlinear transients
-
-Once general stamps exist, DC transistor work can proceed independently of the
-RC integrator. Merge the two for switching tests; neither alone is sufficient.
-
-- [ ] Add NPN/PNP BJT models: begin with Ebers–Moll forward/reverse junctions and
-  transport, then finite output resistance/Early effect and validated parameters.
-  Cover cutoff, forward active, saturation and reverse operation rather than
-  assuming a constant beta or a fixed 0.7 V base-emitter drop everywhere.
-- [ ] Add NMOS/PMOS models with explicit terminal/polarity definitions: cutoff,
-  triode and saturation regions, channel-length modulation, body effect and body
-  diode. Define source/drain reversal consistently. A square-law model alone
-  remains an educational tier, not a claim of fitted silicon behavior.
-- [ ] Expose \(V_{GS},V_{DS},I_D\) or \(V_{BE},V_{CE},I_C\), base/gate currents and
-  dissipated power. Verify terminal-current conservation and cross-derivatives.
-- [ ] Add moderately realistic junction/gate capacitances and BJT stored-charge
-  behavior through the dynamic contract. Document approximations; a static BJT
-  plus arbitrary fixed capacitors does not reproduce all storage/switching delay.
-- [ ] Solve an RC-driven transistor circuit with companion stamps and transistor
-  residuals in the **same Newton system**, not sequential one-way evaluations.
-
-**Acceptance:** DC I–V sweeps cover all supported regions and polarities; RC-fed
-BJT and MOSFET switches give repeatable turn-on/off trajectories under timestep
-refinement. Body/freewheel-diode tests exercise inductive switching. Reference
-comparisons use equivalent documented models; validity bounds and omitted
-breakdown/thermal effects are visible rather than hidden.
-
-## Milestone 5 — deterministic AVR/analog time coupling
-
-The current 32-instruction polling and render-frame pacing are adequate for
-Blink but cannot be the timing contract for short pulses, PWM, RC threshold
-crossings or ADC acquisition.
-
-**Digital and DC-coupling precursor (implemented).** [`breadboard/`](../breadboard/)
-provides a headless host with a simulated-time scheduler in AVR cycles, an HC-SR04
-whose ECHO transition is driven onto a real pad and observed back through `PINx`,
-a netlist-driven DC analog loop that pushes solved node voltages into the ADC mux
-channels, and I2C/SPI devices attached through the core's own callbacks. That
-covers *timestamped external events*, *event-ordered determinism*, *headless
-execution* and the *ADC electrical coupling* line item for DC. It does **not**
-cover transient analog state advance, board-specific driver impedances as
-measured data, sample-and-hold, threshold-crossing feedback with refinement,
-power/reset topology-edit policy, or transfers paced by real bus rates — so the
-milestone below remains open.
-
-- [ ] Observe GPIO mode/value changes with AVR cycle timestamps, including
-  timer overrides, and align the analog solver with those event boundaries.
-  Define ordering at coincident events and instruction-cycle timing precision.
-- [ ] Advance analog state in **simulated time**, independently of wall time,
-  frame rate, view, pause/resume or camera controls. Express the clock bridge as
-  explicit AVR cycles ↔ seconds rather than accumulated frame-time rounding.
-- [ ] Add board-specific driver high/low impedances, pull-ups, high impedance,
-  rails and input thresholds. Loaded output pad readback and protection paths
-  need explicit adapter behavior, not changes to the AVR parity semantics.
-- [ ] Feed analog threshold crossings back into digital inputs at bounded timing
-  error; add hysteresis only where the board profile specifies it. Keep invalid
-  voltage bands explicit. Handle feedback causally; do not accept analog steps
-  past a CPU-affecting event without a synchronization/refinement strategy.
+- [ ] Observe GPIO mode/value changes with AVR cycle timestamps, including timer
+  overrides, and align the electrical solve with those event boundaries. Define
+  ordering at coincident events and the instruction-cycle timing precision.
+- [ ] Advance electrical state in **simulated time**, independently of wall
+  time, frame rate, view, pause/resume or camera controls. Express the clock
+  bridge as explicit AVR cycles ↔ seconds, never accumulated frame-time rounding.
+- [ ] Feed threshold crossings back into digital inputs at bounded timing error.
+  Keep invalid voltage bands explicit and handle feedback causally: do not accept
+  an integration step past a CPU-affecting event without synchronization.
+- [ ] Define what a `.op` cache hit means for a circuit with storage. A capacitor
+  keeps charging when the GPIO state does not change, so the current
+  "unchanged drive mode ⇒ reuse the reading" rule must **not** govern transient
+  advancement.
+- [ ] Define reset/pause/resume policy for committed electrical state. An MCU
+  reset must not silently discharge real storage components; an explicit
+  power-cycle action may have different semantics.
 - [ ] Model ADC voltage/reference and acquisition timing through a headless
   adapter; add sample-and-hold impedance/capacitance where it matters.
-- [ ] Specify analog startup/reset/history policy and electrical topology-edit
-  policy. MCU reset alone must not silently discharge real storage components;
-  explicit power-cycle/reset-circuit actions may have different semantics.
 
-**Acceptance:** GPIO→RC→input threshold timing, PWM low-pass average/ripple and
-ADC samples match analytic/reference traces at defined timing tolerances.
-Different GUI frame rates and headless execution give the same accepted waveform;
-pause advances neither clock. Faster-than-current-polling pulses are not lost.
-Regression tests retain the existing AVR offline parity gate unchanged.
+**Acceptance:** GPIO → RC → input-threshold timing, PWM low-pass average/ripple
+and ADC samples match analytic or captured reference traces at documented
+tolerances. Different GUI frame rates and headless execution give the same
+accepted waveform; pause advances neither clock. Pulses shorter than the current
+polling interval are not lost. Regression tests keep the AVR offline parity gate
+unchanged.
 
-## Milestone 6 — practical model fidelity, parasitics and tolerances
+RC analytic checks remain the first vertical slice: for a zero-initial-voltage
+step, \(V_C(t) = V_S(1-e^{-t/RC})\) should be reproduced to within 0.5% of the
+source step at \(RC\) and \(5RC\) at a fixed step \(\Delta t \le RC/100\), with
+first-order convergence under step halving, and the corresponding discharge.
+RL and RLC follow; RLC behaviour must distinguish physical damping from
+integrator damping under step refinement.
 
-Some of this work should start with the RC/transistor milestones, not wait until
-all mechanisms are implemented.
+## Milestone 2 — board and part profiles with provenance
 
-- [ ] Introduce model/part profiles with units, parameter ranges, calibration
-  temperature, provenance, version, pinout and known omissions. Fit actual
-  diode/LED curves and typical kit BJTs/MOSFETs, rather than treating illustrative
-  defaults as measured facts. Pinout errors are as important as numeric errors.
+- [ ] Add board profiles: driver high/low impedances, pull-up values, rails,
+  input thresholds and hysteresis, ADC reference and acquisition parameters.
+  Loaded output pad readback and protection paths belong here, not in the AVR
+  parity semantics.
+- [ ] Introduce part/model profiles with units, parameter ranges, calibration
+  temperature, **provenance**, version, pinout and known omissions. Fit actual
+  diode/LED curves and typical kit BJTs/MOSFETs instead of treating illustrative
+  defaults as measured facts. A pinout error is as important as a numeric error.
+- [ ] Diagnose invalid ideal topologies rather than "repairing" them with
+  undisclosed resistance. Source regulation/current limits are separate optional
+  models, not an interpretation of the current Thevenin resistance.
+- [ ] Keep real modeled leakage separate from numerical regularization. Never
+  report success for a circuit modified by continuation or `gmin`.
+
+**Acceptance:** every shipped profile names its source and validity range;
+changing a documented parameter changes the trace in the documented direction;
+unsupported model features fail explicitly rather than being approximated.
+
+## Milestone 3 — parasitics, tolerances and corner analysis
+
 - [ ] Support capacitor ESR/leakage, inductor winding resistance, source/cable
   impedance, wire/breadboard/contact resistance and optional stray capacitance.
   Model junction/gate capacitance without double-counting explicit parasitics.
 - [ ] Provide ideal/nominal/practical profiles so parasitic assumptions are
-  inspectable. Diagnose invalid ideal topologies rather than "repairing" them
-  with undisclosed resistance. Source regulation/current limits are separate
-  optional models, not an interpretation of the current Thevenin resistance.
+  inspectable.
 - [ ] Add component tolerance/corner analysis and seeded Monte Carlo runs. State
   distributions, bounds and parameter correlations explicitly; draw parameters
-  once per run, not on every timestep. Validate positive physical values and
-  persist the seed, model versions and sampled parameter set for replay.
-- [ ] Compare representative breadboard measurements (DC curves, RC time
-  constants, PWM ripple and switching traces) against prediction envelopes.
-  Distinguish numerical error, model error and physical component variation.
-- [ ] Only later consider a **documented subset** of SPICE model-card import.
-  Reject unsupported parameters instead of implying full SPICE compatibility;
-  retain provenance and check redistribution licenses for vendor models.
+  once per run, not per timestep. Persist the seed, model versions and sampled
+  values for replay.
 
 **Acceptance:** increasing ESR/contact resistance changes traces as expected;
-measured data fits documented envelopes across more than a single calibration
-point; identical seeds reproduce sampled values/traces. Hardware-validation
-budgets are chosen per fixture and operating range, not a universal accuracy
-claim. These models are not a substitute for hardware safety verification.
+identical seeds reproduce sampled values and traces exactly.
 
-## Milestone 7 — static temperature first; electrothermal coupling later
+## Milestone 4 — temperature
 
-- [ ] Add explicit ambient/model temperature in kelvin and reference-temperature
-  metadata. Use \(V_T=k_B T/q\) together with appropriate saturation-current,
-  threshold/mobility/beta and resistance temperature dependence; changing only
-  diode thermal voltage is not a sufficient temperature model.
+- [ ] Expose ambient/model temperature and reference-temperature metadata as
+  explicit run settings, and keep them out of hidden defaults. Device temperature
+  dependence itself comes from ngspice-rs models, including the diode's
+  \(V_T = k_B T / q\); the project's LED presets currently pin the circuit
+  temperature to reproduce an illustrative 25.85 mV thermal voltage.
 - [ ] Test supported temperature sweeps and validate ranges against available
-  part data. Record temperature in every reproducible run.
-- [ ] Defer self-heating/thermal storage and electrical/thermal feedback until
-  justified by practical circuits; they require additional state and validated
-  thermal parameters. Overstress warnings need documented part ratings even
-  before a destruction model exists.
+  part data; record the temperature in every reproducible run.
+- [ ] Defer self-heating and electrothermal feedback until justified by practical
+  circuits: they need additional state and validated thermal parameters.
 
 **Acceptance:** diode forward-voltage and supported transistor/resistor trends
-match the model's documented range; invalid temperatures fail explicitly.
-No claims of predicting thermal damage from electrical power alone.
+match the model's documented range; invalid temperatures fail explicitly. No
+claims of predicting thermal damage from electrical power alone.
 
-## Milestone 8 — optional AC analysis and higher-fidelity models
+## Milestone 5 — analysis breadth in the GUI
 
-Lower priority than RC and switching for the intended kit circuits.
+Lower priority than the coupling and the profiles, and gated on both.
 
-- [ ] Linearize current and charge equations about a converged DC operating point
-  and solve the complex small-signal system
-  \([J_F+j\omega J_Q]\,\delta x=\delta b\).
-- [ ] Document frequency, amplitude/phase and peak/RMS conventions. AC is a
-  local linear approximation, not a replacement for large-signal switching.
-- [ ] Add validated higher-tier transistor models, sparse matrices or more
-  integration methods only when measured failures/performance justify them.
+- [ ] Expose `.tran` waveforms for RC charging, PWM averaging and switching, once
+  the coupling can advance electrical time causally (Milestone 1).
+- [ ] Expose `.ac` sweeps for RC/RLC and biased small-signal response, with
+  frequency, amplitude/phase and peak/RMS conventions documented. AC is a local
+  linear approximation at a converged operating point, not a substitute for
+  large-signal switching.
+- [ ] Present accepted waveforms and diagnostics, never trial or rejected steps.
 
-**Acceptance:** RC/RLC gain/phase matches analytical curves; biased transistor
-small-signal responses match an equivalent reference model. Missing bias points
-or unsupported model features produce explicit errors.
+**Acceptance:** RC/RLC gain/phase matches analytical curves; biased small-signal
+responses match an equivalent reference model; unsupported analyses produce
+explicit errors.
 
-## Recommended execution order and definition of done
+## Execution order and definition of done
 
-1. Preserve current regression fixtures; generalize MNA/stamps (Milestone 1).
-2. Extract reusable Newton and initial-guess/state contracts (Milestone 2).
-3. Deliver the headless backward-Euler **RC charging/discharging vertical slice**
-   before expanding semiconductor detail (Milestone 3).
-4. Add DC BJT/MOSFET models and their combined nonlinear transient tests
-   (Milestone 4); transistor DC work may overlap step 3 after stamp contracts exist.
-5. Replace GUI polling with deterministic headless AVR event/time coupling
-   (Milestone 5); expose accepted waveforms/measurements in the GUI.
-6. Iterate measured part profiles, source/parasitic impedance and tolerance
-   envelopes (Milestone 6), then temperature (Milestone 7).
-7. Treat AC and industrial-model breadth as optional extensions (Milestone 8).
+1. Causal AVR/analog time coupling, with the headless RC vertical slice
+   (Milestone 1).
+2. Board and part profiles with provenance (Milestone 2).
+3. Parasitics, tolerances and corners (Milestone 3), then temperature
+   (Milestone 4).
+4. GUI waveforms and sweeps last (Milestone 5).
 
-For each milestone: ship headless analytical/independent-reference tests,
-convergence and invalid-input tests, documented model limits and a small runnable
-example before adding GUI polish. Run the electrical library gate and the AVR
-parity gate separately; new analysis work must not add dependencies to the core
-lockfile. Reference SPICE runs/hardware measurements can be optional fixture
-capture tools, while checked-in numerical fixtures keep ordinary tests offline.
+For each milestone: ship headless analytical or independent-reference tests,
+explicit invalid-input tests, documented model limits and a small runnable
+example before GUI polish. Run the electrical gate and the AVR parity gate
+separately; new analysis work must not add dependencies to the core lockfile.
+Captured reference data may be produced by tools, but ordinary tests must not
+require a C ngspice build.
 
-Record solver/model versions, initial conditions, stimuli, timestep/tolerance
-settings, seed/parameter samples, temperature and diagnostics with captured
-waveforms. A failed timestep, modified continuation circuit or unsupported device
-model must never be presented as a successful hardware prediction.
+Record engine/model versions, initial conditions, stimuli, timestep and
+tolerance settings, seeds, temperature and diagnostics with captured waveforms.
+A failed step, a modified continuation circuit or an unsupported device model
+must never be presented as a successful hardware prediction.

@@ -4,7 +4,7 @@ A raylib front-end for the native AVR simulator in `../rust_port`. Six views
 share one window: the simulator runs a **real Arduino sketch** built by
 `arduino-cli` for an ATmega328P, and raylib only observes it.
 
-* **Blink** — a separate nonlinear DC solver computes the external circuit's
+* **Blink** — a `.op` solve by ngspice-rs computes the external circuit's
   voltages and currents, and the external LED is lit by *solved* forward current.
 * **Ultrasonic ranging** — a real HC-SR04 sketch pulses TRIG, times ECHO and
   reports its measurement over I2C. The 3D view is **to scale** (1 unit = 10 mm)
@@ -303,19 +303,21 @@ AVR Thevenin driver -- D13 -- red jumper -- 220 ohm -- orange jumper -- LED A
 GND ------------------------ dark ground jumper -------------------- LED K
 ```
 
-The electrical graph lives in `src/analog.rs`, using the independent
-[`analog-solver`](../analog-solver/) and
-[`circuit-components`](../circuit-components/) crates:
+The electrical circuit lives in `src/analog.rs` as a **SPICE deck** solved by
+[ngspice-rs](https://github.com/michaelnavazhylau/ngspice-rs) through
+[`breadboard::spice`](../breadboard/src/spice.rs):
 
 - Output high: 5 V source through 25 Ω; output low: 0 V through 25 Ω.
 - Input: driver disconnected. Input pull-up: 5 V through 30 kΩ.
-- The resistor uses Ohm's law; the LED uses a directional Shockley I(V) curve
-  with explicit parasitic leakage. Node voltages and source/device currents
-  are solved with nonlinear MNA, not assigned from a GPIO boolean.
+- The resistor uses Ohm's law; the LED is a SPICE diode with an explicit
+  parasitic shunt for leakage. Node voltages come from a `.op` analysis rather
+  than from a GPIO boolean, and the branch current is derived from the ideal
+  series resistor.
 - Forward: Vpin ≈ 4.709 V, Vled ≈ 2.151 V, Iled ≈ 11.630 mA.
-  Reversed with D13 high: Vled ≈ −5 V, Iled ≈ −5 pA and zero brightness.
-- The HUD shows signed voltage/current, absorbed/supplied power and KCL error.
-  Solver failures appear as errors, not stale lit LEDs or partial solutions.
+  Reversed with D13 high: Vled ≈ −5 V, Iled ≈ −10 pA (ngspice's junction `gmin`)
+  and zero brightness.
+- The HUD shows signed voltage/current and absorbed/supplied power. A solve that
+  fails appears as an error, not a stale lit LED or a partial solution.
 
 GPIO drive mode is sampled every 32 AVR instructions, using the core's pin
 state API (including DDR, pull-ups and timer overrides). A changed state/polarity
@@ -333,12 +335,14 @@ even while paused. The displayed digital header is ordered D8..D13, GND, AREF,
 SDA, SCL; wires end on D13 and GND. Start with
 `BLINK_VIEW=3d cargo run --release`.
 
-**Model limits:** this is a memoryless DC solve, not full SPICE. No capacitors,
-inductors, dynamic transients, diode breakdown, thermal damage, MCU protection
-diodes or regulator/current-limit behavior. The source resistance and red LED
+**Model limits:** this is a **DC operating point** (`.op`), not a transient
+analysis. ngspice-rs can integrate transients, but the host's AVR/analog coupling
+is DC-only, so there are no capacitors, inductors, dynamic transients, diode
+breakdown, thermal damage, MCU protection diodes or regulator/current-limit
+behavior. The source resistance and red LED
 parameters are illustrative, not hardware-characterized. The series resistor
 limits current; there is no active constant-current regulator. The onboard
-indicator and power LED are decorative/digital, outside this analog netlist.
+indicator and power LED are decorative/digital, outside this deck.
 The fixed topology is not an interactive circuit editor.
 
 ## The ultrasonic ranging demo
@@ -469,22 +473,22 @@ These are illustrative curves, **not fitted data** for any particular part; real
 parts vary by colour bin, and the green and blue figures are closer to modern
 InGaN parts than to older GaP green.
 
-### Netlist and coupling
+### Deck and coupling
 
-The circuit is described as data and driven through `breadboard`'s
-`AnalogCoupling`, so this demo exercises the netlist and coupling layers rather
-than a hand-written netlist:
+The circuit is described as SPICE deck text and driven through `breadboard`'s
+`AnalogCoupling`, so this demo exercises the deck and coupling layers rather
+than a hand-written simulator call:
 
 ```text
-D9  -> R1 330 -> D1 led.red   -> GND
-D10 -> R2 330 -> D2 led.green -> GND
-D11 -> R3 330 -> D3 led.blue  -> GND
+D9  -> R1 330 -> D1 (red)   -> GND
+D10 -> R2 330 -> D2 (green) -> GND
+D11 -> R3 330 -> D3 (blue)  -> GND
 ```
 
 Each pin contributes a Thevenin driver for its current mode, the three branches
-solve together in one MNA system, and the brightness on screen comes from the
-**solved** forward current — an LED on a pin the firmware drove high still looks
-dark if its branch carries no current.
+solve together in one `.op` analysis, and the brightness on screen comes from
+the **solved** forward current — an LED on a pin the firmware drove high still
+looks dark if its branch carries no current.
 
 ### What the tests check
 
@@ -510,13 +514,15 @@ A mechanical switch is **not a wire**, and modelling it as one would be wrong in
 both directions: a closed contact really does have resistance, and an open one
 really does insulate rather than perfectly disconnect. So both states are finite
 resistances with datasheet-style values for a tactile switch — 50 mΩ closed,
-100 MΩ open. That keeps the topology fixed, so a toggle changes one parameter
-instead of merging or splitting solver nodes.
+100 MΩ open. The coupling emits that resistor into the deck, so a toggle changes
+one value instead of merging or splitting network nodes.
 
 The button is therefore neither a `Stimulus` nor part of the MCU driver model. A
-switch changes the electrical network itself, so it is a netlist part whose state
-the host throws through `AnalogCoupling::set_switch`, and a toggle recompiles the
-topology because the two states differ in conductance by nine decades.
+switch changes the electrical network itself, so the host declares it with
+`AnalogCoupling::bind_switch` and throws it with `set_switch`; the next solve
+emits the contact or the insulation resistance. Because the two states differ in
+conductance by nine decades, the operating point must be re-solved rather than
+reused.
 
 ### The four-legged package
 
@@ -524,8 +530,8 @@ The [ELEGOO lesson](https://wiki.elegoo.com/oshw-getting-started-&-kits/button-s
 is right that a tactile switch's four legs confuse people: legs `A`/`D` are
 internally one contact and `B`/`C` the other, which is why the jumpers land on
 opposite sides of the body and the two legs on each side are interchangeable. The
-3D model draws all four legs for exactly that reason, while the netlist part has
-the two contacts it electrically has.
+3D model draws all four legs for exactly that reason, while the generated switch
+element has the two contacts it electrically has.
 
 ### What the tests check
 
@@ -586,12 +592,12 @@ a plain `i32` in the raylib-sys 6.0 bindings rather than the enum.
 | --- | --- |
 | `src/main.rs` | window, input, view switching, main loop |
 | `src/sim.rs` | AVR stepping, GPIO sampling and analog input feedback |
-| `src/analog.rs` | electrical netlist, driver models and cached operating points |
+| `src/analog.rs` | the blink deck, driver models and cached operating points |
 | `src/board3d.rs` | procedural Uno geometry and LED rendering |
 | `src/circuit3d.rs` | jumper wires, banded resistor, current-lit LED and polarity markers |
 | `src/sensor_sim.rs` | ultrasonic demo: firmware boot, HC-SR04, I2C telemetry readback |
 | `src/sensor3d.rs` | to-scale ranging rig: module, Uno placement, jumpers, ruler track and target |
-| `src/leds_sim.rs` | three-LED demo: netlist, analog coupling and the headless electrical tests |
+| `src/leds_sim.rs` | three-LED demo: deck, analog coupling and the headless electrical tests |
 | `src/leds3d.rs` | to-scale breadboard: slab, three resistor/LED columns and the jumpers |
 | `src/switch_sim.rs` | switch-input demos: both wirings, the button state and headless tests |
 | `src/switch3d.rs` | tactile switch with a travelling stem, plus the LED chain and jumpers |
@@ -609,19 +615,20 @@ See the [implementation roadmap](../docs/sim2real-roadmap.md) for transient RC
 behavior, transistor switching, timestamped AVR coupling and model validation.
 It also defines why rendering cadence must not drive electrical timesteps and
 why a board reset should not implicitly erase stored capacitor/inductor state.
-The current GUI remains the fixed nonlinear DC demonstration described above.
+The current GUI remains the fixed DC demonstration described above.
 
 ## Checks
 
 ```sh
-# From blink-gui (requires installed system raylib, but no display for unit tests):
+# From blink-gui (requires installed system raylib, and the Cargo registry for
+# ngspice-rs and its numerical dependencies; no display is needed for unit tests):
 cargo fmt --check
-cargo clippy --all-targets --release --locked --offline -- -D warnings
-cargo test --release --locked --offline
+cargo clippy --all-targets --release --locked -- -D warnings
+cargo test --release --locked
 
-# From repository root (headless and no raylib required):
-bash analog-solver/tools/verify-analog.sh
+# From repository root:
 bash rust_port/tools/verify-native.sh
+bash breadboard/tools/verify-breadboard.sh
 ```
 
 GUI tests exercise compiled Blink firmware, finite output impedance, signed
@@ -634,11 +641,13 @@ too, and checks the solved forward voltages against an independent bisection on
 the LED model plus Ohm's law across each resistor. The switch demos boot both of
 theirs and check the released and pressed levels against independent divider
 predictions, the inversion between the two wirings, and the current each wiring
-draws — **none of which needs a display**. The electrical libraries additionally
-check KCL/KVL, power balance, an independent scalar root and explicit solver
-error cases.
+draws — **none of which needs a display**. `breadboard`'s `spice` module
+therefore additionally checks the deck/solve contract: solved values against
+published operating points, ground aliasing, reverse blocking, undetermined nets
+and rejected decks.
 
 ## Licence
 
-MIT, matching the rest of the repository. raylib is linked, not redistributed;
+MIT, matching the rest of the repository. raylib is linked, not redistributed,
+and ngspice-rs is a build-time crate dependency;
 see [`THIRD_PARTY_NOTICES.md`](../THIRD_PARTY_NOTICES.md).

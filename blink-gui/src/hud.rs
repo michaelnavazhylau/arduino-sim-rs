@@ -82,10 +82,9 @@ pub fn draw(
             );
             d.draw_text(
                 &format!(
-                    "Psrc {:.2} mW   Pdriver {:.2} mW   KCL residual {:.1e} A",
+                    "Psrc {:.2} mW   Pdriver {:.2} mW   solver ngspice-rs .op",
                     r.source_power * 1000.0,
-                    r.driver_power * 1000.0,
-                    r.max_kcl_residual
+                    r.driver_power * 1000.0
                 ),
                 20,
                 132,
@@ -319,7 +318,7 @@ pub fn draw_sensor(
 ///
 /// Each row is tinted with its LED's own palette so the text lines up with the
 /// columns on screen, and every number is a solved quantity: the forward voltage
-/// and current come from the MNA operating point, not from the pin state.
+/// and current come from the deck's operating point, not from the pin state.
 pub fn draw_leds(
     d: &mut RaylibDrawHandle<'_>,
     sim: &LedsSim,
@@ -375,7 +374,7 @@ pub fn draw_leds(
     match sim.outcome() {
         CouplingOutcome::Solved => {
             d.draw_text(
-                &format!("netlist solved, {} solves", sim.solves()),
+                &format!("ngspice-rs .op, {} solves", sim.solves()),
                 20,
                 y + 28,
                 13,

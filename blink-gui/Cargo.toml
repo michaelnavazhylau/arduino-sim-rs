@@ -11,8 +11,7 @@ publish = false
 # dependency-free and its `--locked --offline` CI gate is unaffected.
 [dependencies]
 avr-port-tests = { path = "../rust_port" }
-analog-solver = { path = "../analog-solver" }
-circuit-components = { path = "../circuit-components" }
+# The electrical backend, and the SPICE helpers and LED presets it re-exports.
 breadboard = { path = "../breadboard" }
 # `nobuild` links the system raylib instead of compiling the vendored copy with
 # cmake. See README.md for the matching linker search path.

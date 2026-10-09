@@ -3,18 +3,17 @@
 //! Switch tests: two wirings of the same button must read **opposite** ways.
 //!
 //! A pull-up reads high when the button is open and low when it is closed; a
-//! pull-down reads the other way round. Both circuits are built as netlists and
-//! driven through `AnalogCoupling`, so what is under test is the electrical
-//! result rather than a boolean the host asserted.
+//! pull-down reads the other way round. Both circuits are SPICE decks driven
+//! through `AnalogCoupling`, so what is under test is the electrical result
+//! rather than a boolean the host asserted.
 //!
 //! Recommended values are checked against independently computed voltage
-//! dividers rather than against the solver's own answer, because the whole point
-//! of a switch model with finite resistance in *both* states is that an open
-//! contact is not a perfect break and a closed one is not a perfect short.
+//! dividers rather than against the simulator's own answer, because the whole
+//! point of a switch model with finite resistance in *both* states is that an
+//! open contact is not a perfect break and a closed one is not a perfect short.
 
 use avr_port_tests::sim::assembler::assemble;
-use breadboard::netlist::{resistor, switch, vsource, Netlist};
-use breadboard::{AnalogCoupling, BreadboardHost, Pin, Scene, Wiring};
+use breadboard::{AnalogCoupling, BreadboardHost, CouplingError, Pin, Scene, Wiring};
 
 const DDRB: usize = 0x24;
 const PORTB: usize = 0x25;
@@ -32,7 +31,7 @@ fn button() -> Pin {
 const PULLUP_OHMS: f64 = 30_000.0;
 /// The illustrative pull-down in the second wiring.
 const PULLDOWN_OHMS: f64 = 10_000.0;
-/// Datasheet-style tactile switch resistances, matching the component defaults.
+/// Datasheet-style tactile switch resistances, matching the coupling defaults.
 const CONTACT_OHMS: f64 = 0.05;
 const INSULATION_OHMS: f64 = 100e6;
 
@@ -44,22 +43,26 @@ fn idle_flash() -> Vec<u8> {
     flash
 }
 
-fn host_with(netlist: Netlist) -> BreadboardHost {
+/// A host with `deck` coupled to the button, whose switch joins `btn` to
+/// `switch_net`.
+fn host_with(deck: &str, switch_net: &str) -> BreadboardHost {
     let mut host =
         BreadboardHost::new(idle_flash(), Scene::empty(), Vec::new()).expect("host boots");
-    let mut coupling = AnalogCoupling::new(netlist, Wiring::new().bind(button(), "btn"))
-        .expect("coupling is valid");
-    coupling.bind_switch("SW1").expect("SW1 is a switch");
+    let mut coupling =
+        AnalogCoupling::new(deck, Wiring::new().bind(button(), "btn")).expect("coupling is valid");
+    coupling
+        .bind_switch("SW1", "btn", switch_net)
+        .expect("switch binds");
     host.attach_analog(coupling).expect("pin is free");
     host
 }
 
 /// Button to ground, read with the AVR's **internal pull-up**.
+///
+/// The deck has no static parts at all: the pull-up is the MCU driver and the
+/// switch is the only other element, both supplied by `AnalogCoupling`.
 fn pull_up_host() -> BreadboardHost {
-    let netlist = Netlist::new()
-        .nets(["btn"])
-        .part(switch("SW1", "btn", "gnd"));
-    let mut host = host_with(netlist);
+    let mut host = host_with("pull-up button\n.end\n", "gnd");
     // Input with the internal pull-up: DDRB bit 0 clear, PORTB bit 0 set.
     host.write_data(DDRB, 0);
     host.write_data(PORTB, 1 << BUTTON_BIT);
@@ -69,12 +72,8 @@ fn pull_up_host() -> BreadboardHost {
 
 /// Button to the 5 V rail, with an **external pull-down** to ground.
 fn pull_down_host() -> BreadboardHost {
-    let netlist = Netlist::new()
-        .nets(["btn", "vcc"])
-        .part(vsource("M5V", 5.0, "vcc", "gnd"))
-        .part(switch("SW1", "btn", "vcc"))
-        .part(resistor("R1", PULLDOWN_OHMS, "btn", "gnd"));
-    let mut host = host_with(netlist);
+    let deck = "pull-down button\nV1 vcc 0 5\nR1 btn 0 10000\n.end\n";
+    let mut host = host_with(deck, "vcc");
     // Plain input: the external resistor does the work, not the AVR.
     host.write_data(DDRB, 0);
     host.write_data(PORTB, 0);
@@ -82,7 +81,7 @@ fn pull_down_host() -> BreadboardHost {
     host
 }
 
-/// Throw the switch and let the topology recompile.
+/// Throw the switch and let the next solve pick it up.
 fn press(host: &mut BreadboardHost, closed: bool) {
     assert!(
         host.analog_mut()
@@ -218,7 +217,7 @@ fn a_closed_pull_up_draws_about_167_microamps_and_the_pull_down_half_a_milliamp(
 }
 
 #[test]
-fn throwing_a_switch_recompiles_the_topology_exactly_once() {
+fn throwing_a_switch_recompiles_the_operating_point_exactly_once() {
     let mut host = pull_up_host();
     let before = host.analog().expect("attached").solves();
 
@@ -235,18 +234,39 @@ fn throwing_a_switch_recompiles_the_topology_exactly_once() {
 }
 
 #[test]
-fn binding_something_that_is_not_a_switch_is_reported() {
-    let netlist = Netlist::new()
-        .nets(["btn"])
-        .part(resistor("R1", 10_000.0, "btn", "gnd"));
-    let mut coupling =
-        AnalogCoupling::new(netlist, Wiring::new().bind(button(), "btn")).expect("valid");
-    assert!(matches!(
-        coupling.bind_switch("R1"),
-        Err(breadboard::CouplingError::NotASwitch(reference)) if reference == "R1"
-    ));
-    assert!(matches!(
-        coupling.bind_switch("SW9"),
-        Err(breadboard::CouplingError::NotASwitch(reference)) if reference == "SW9"
-    ));
+fn a_switch_bound_to_a_net_nothing_connects_is_reported() {
+    let mut coupling = AnalogCoupling::new(
+        "dangling switch\nR1 btn 0 10000\n.end\n",
+        Wiring::new().bind(button(), "btn"),
+    )
+    .expect("deck is valid");
+    coupling.bind_switch("SW1", "btn", "nowhere").unwrap();
+    assert_eq!(
+        coupling.validate().unwrap_err(),
+        CouplingError::UnknownSwitchNet {
+            reference: "SW1".into(),
+            net: "nowhere".into()
+        }
+    );
+}
+
+#[test]
+fn binding_the_same_switch_twice_or_over_a_deck_element_is_reported() {
+    let mut coupling = AnalogCoupling::new(
+        "clashing switch\nRSW1 btn 0 1000\n",
+        Wiring::new().bind(button(), "btn"),
+    )
+    .expect("deck is valid");
+
+    // `SW1` becomes `RSW1`, which the deck already uses.
+    assert_eq!(
+        coupling.bind_switch("SW1", "btn", "0").unwrap_err(),
+        CouplingError::DuplicateSwitch("SW1".into())
+    );
+
+    coupling.bind_switch("SW2", "btn", "0").expect("binds");
+    assert_eq!(
+        coupling.bind_switch("SW2", "btn", "0").unwrap_err(),
+        CouplingError::DuplicateSwitch("SW2".into())
+    );
 }

@@ -71,9 +71,34 @@ count and SHA-256 hash — is published, in
 ## Rust dependencies
 
 `rust_port` has an empty `[dependencies]` table, so no third-party Rust code is
-compiled into the simulator, its test harness or its CI gate.
+compiled into the AVR simulator, its test harness or its parity gate.
 
-The optional [`blink-gui/`](blink-gui/) demo does pull in
+The headless [`breadboard/`](breadboard/) host and the optional
+[`blink-gui/`](blink-gui/) demo do pull in third-party Rust code, both fetched
+from the package index at build time and not part of this repository.
+
+### ngspice-rs and its numerical dependencies — not redistributed
+
+[`breadboard/`](breadboard/) depends on
+[ngspice-rs](https://github.com/michaelnavazhylau/ngspice-rs) 0.1, a from-scratch
+Rust reimplementation of the ngspice circuit simulator. It is a **derivative
+work** of ngspice's C sources and keeps ngspice's Modified BSD (BSD-3-Clause)
+license. There is no FFI: the C tree is used only as a read-only specification
+and an out-of-process oracle, so no `libngspice` is linked and no C source is
+redistributed here.
+
+ngspice-rs in turn pulls `faer` and `faer-traits` (MIT), `diffsol`,
+`diffsol-la` and `diffsol-nl` (MIT), `petgraph` (MIT OR Apache-2.0) and `winnow`
+(MIT), plus their transitive dependencies, from the package index at build time.
+None of them are part of this repository.
+
+Because of that dependency, `breadboard` — and therefore `blink-gui` — is no
+longer buildable `--offline` on a cold Cargo registry. `rust_port` keeps its
+empty `[dependencies]` table, so the offline AVR parity gate is unaffected.
+
+### raylib — not redistributed
+
+The optional [`blink-gui/`](blink-gui/) demo pulls in
 [raylib-rs](https://github.com/raysan5/raylib-rs) (`raylib` / `raylib-sys` +
 ~40 transitive crates), fetched from the package index at build time and not
 part of this repository. raylib-rs is distributed under the Zlib license, and
