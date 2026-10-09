@@ -1,5 +1,9 @@
 # arduino-sim-rs
 
+[![crates.io](https://img.shields.io/crates/v/avr-sim.svg)](https://crates.io/crates/avr-sim)
+[![docs.rs](https://docs.rs/avr-sim/badge.svg)](https://docs.rs/avr-sim)
+[![license](https://img.shields.io/crates/l/avr-sim.svg)](LICENSE)
+
 A native Rust AVR simulator compatibility port, with a pinned AVR8js reference
 and a converted behavioral contract. No JavaScript runtime or bridge is used.
 
@@ -25,7 +29,9 @@ For an existing clone, initialize the reference with
 
 - [`rust_port/`](rust_port/): the dependency-free `avr-sim` crate — simulator
   core, host-side board glue, the scenario representation and its runner,
-  hardware specification provenance and the offline engine gate.
+  hardware specification provenance and the offline engine gate. Published on
+  [crates.io](https://crates.io/crates/avr-sim) with
+  [API docs](https://docs.rs/avr-sim).
 - [`blink-gui/`](blink-gui/): optional raylib GUI. It runs a real blink sketch
   on the simulator as a flat schematic or a procedural 3D rendition of the Uno,
   runs a real HC-SR04 sketch in a **to-scale** (1 unit = 10 mm) 3D scene where the

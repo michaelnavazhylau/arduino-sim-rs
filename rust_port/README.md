@@ -1,5 +1,9 @@
 # avr-sim — native Rust AVR simulator core
 
+[![crates.io](https://img.shields.io/crates/v/avr-sim.svg)](https://crates.io/crates/avr-sim)
+[![docs.rs](https://docs.rs/avr-sim/badge.svg)](https://docs.rs/avr-sim)
+[![license](https://img.shields.io/crates/l/avr-sim.svg)](LICENSE)
+
 A dependency-free native Rust AVR8 simulator: assembler, CPU/instructions/
 interrupts, clock, GPIO, megaAVR timers, ATtiny Timer1, EEPROM, ADC, SPI, USART,
 TWI master states and watchdog. Backend milestones 0–6 are complete. There is
