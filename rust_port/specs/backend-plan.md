@@ -1,8 +1,10 @@
 # Native backend implementation contract and milestones
 
 Status: **milestones 0–6 implemented and verified**. All **347 converted
-scenarios** run by default with **zero ignored cases**. Including assembler,
-harness and native regressions, **392 tests pass in debug and release**.
+scenarios** run by default with **zero ignored cases**, in the separate
+`avr8js-parity` repository. Including that repository's contract coverage test
+and this crate's assembler, harness and native regressions, **393 tests pass in
+debug and release**.
 Official specifications are pinned locally; no JavaScript execution is used.
 Completion denotes the converted compatibility baseline, not complete source API
 parity, production adapter/core separation or hardware fidelity.
@@ -11,8 +13,10 @@ parity, production adapter/core separation or hardware fidelity.
 
 1. **Compatibility behavior:** pinned upstream `../../avr8js/src/` production
    source plus the converted Rust scenarios. Upstream revision:
-   `bee6f0a94e0e27786f6bc21aee3c775849fb50fd`. Test input hashes are in
-   `../conversion-manifest.json`.
+   `bee6f0a94e0e27786f6bc21aee3c775849fb50fd`. The scenarios themselves and their
+   test input hashes (`conversion-manifest.json`) live in the separate
+   `avr8js-parity` repository, which pins the same revision as a live submodule;
+   this repository keeps `avr8js/` uninitialized, for provenance only.
 2. **Hardware behavior:** the four pinned Microchip documents in
    [sources.json](sources.json), with section/page navigation in [README.md](README.md).
 3. **Adapter behavior:** `../src/runtime.rs` (`Backend`, `Value`, synchronous
@@ -147,7 +151,7 @@ are an additional layer, not a replacement for those fixtures.
 
 | Milestone | Work | Behavior cases unlocked | Gate |
 | --- | --- | ---: | --- |
-| 0 ✓ | Native registry, memory views, Backend plumbing | 0 | 13 harness tests; unsupported operations fail |
+| 0 ✓ | Native registry, memory views, Backend plumbing | 0 | 12 harness tests; unsupported operations fail |
 | 1 ✓ | Assembler parser, directives, opcode encoding | 83 | `cargo test utils_assembler`; 4 additional unit tests |
 | 2 ✓ | CPU memory, events, interrupts | 8 | `cargo test cpu_cpu` and `cargo test cpu_interrupt` |
 | 3 ✓ | Instruction decode/execute, flags, stack, extended addressing | 97 | `cargo test cpu_instruction`; cumulative 188 |
@@ -156,10 +160,12 @@ are an additional layer, not a replacement for those fixtures.
 | 6 ✓ | EEPROM, ADC, SPI, USART, TWI master states, watchdog | 64 | All six suites enabled after verification; cumulative 347; 20 extra peripheral/recovery tests |
 
 All milestones execute real Rust code. Full checks pass: formatting, strict
-Clippy, offline debug/release tests and converter `--check`. The native parity
-gate is `bash tools/verify-native.sh` from `rust_port/`; it rejects ignored
-converted cases and runs all targets with `--include-ignored`. GitHub Actions
-adds deterministic conversion against the pinned AVR8js submodule.
+Clippy and offline debug/release tests. The engine gate is
+`bash tools/verify-native.sh` from `rust_port/`; it runs all targets with
+`--include-ignored` as defense in depth. The converted scenarios and the
+converter `--check` moved to the separate `avr8js-parity` repository, whose gate
+rejects ignored converted cases and verifies deterministic conversion against
+the pinned AVR8js submodule.
 
 Each milestone should include native unit tests beyond the converted cases.
 Keep `Runtime`/`Value` in the test-adapter layer rather than making the production
@@ -170,13 +176,15 @@ when its supported operations actually execute native code. Unsupported operatio
 must remain explicit failures.
 
 Do not remove all `#[ignore]` attributes at once. Enable suites as they pass and
-update `tools/convert.cjs` so regeneration retains the intended gates. The final
-behavior check must run the simulator suites, not just the green harness build.
+update `tools/convert.cjs` in `avr8js-parity` so regeneration retains the intended
+gates. The final behavior check must run the simulator suites, not just the green
+harness build.
 
 ## Current architecture and residual limitations
 
-- `src/sim/` implements native state and dispatch; the generated suites are
-  unchanged except for their enablement gates. No JS engine is embedded.
+- `src/sim/` implements native state and dispatch; the converted suites in
+  `avr8js-parity` are unchanged except for their enablement gates. No JS engine
+  is embedded.
 - Peripheral hooks receive a live CPU through the native instruction bus.
   Raw memory writes bypass hooks; host read/write hooks support synchronous
   reentry and write suppression/fallback.

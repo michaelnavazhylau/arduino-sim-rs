@@ -1,4 +1,4 @@
-name: Native AVR parity
+name: Native AVR engine and breadboard
 
 on:
   push:
@@ -9,7 +9,7 @@ permissions:
   contents: read
 
 jobs:
-  native-parity:
+  native:
     # Pinned rather than ubuntu-latest, which migrates to Ubuntu 26 in Oct 2026.
     runs-on: ubuntu-24.04
     # Raised from 15 when the breadboard gate took on ngspice-rs: faer, diffsol,
@@ -17,9 +17,12 @@ jobs:
     # on a cold cache, which dominates the job.
     timeout-minutes: 30
     steps:
+      # The pinned avr8js submodule is a read-only reference for this port's
+      # compatibility claims and is not needed by either gate. The converted
+      # contract, the converter and the deterministic-conversion check live in
+      # the avr8js-parity repository, which verifies itself.
       - uses: actions/checkout@v7
         with:
-          submodules: true
           persist-credentials: false
       # Pinned rather than @stable: a new stable release can promote clippy lints
       # to errors and break the gate. Bump deliberately, together with any lint
@@ -27,16 +30,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@1.99.0
         with:
           components: rustfmt, clippy
-      - uses: actions/setup-node@v7
-        with:
-          node-version: '22'
-          cache: npm
-          cache-dependency-path: rust_port/tools/package-lock.json
-      - name: Verify native suites in debug and release
+      - name: Verify the avr-sim engine and its regressions
         run: bash rust_port/tools/verify-native.sh
       - name: Verify breadboard host and external components
         run: bash breadboard/tools/verify-breadboard.sh
-      - name: Install pinned conversion tooling
-        run: npm --prefix rust_port/tools ci --ignore-scripts
-      - name: Verify deterministic conversion and source hashes
-        run: npm --prefix rust_port/tools run check

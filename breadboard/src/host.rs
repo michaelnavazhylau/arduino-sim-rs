@@ -21,9 +21,9 @@ use crate::scene::Scene;
 use crate::scheduler::{Scheduler, StimulusId};
 use crate::stimulus::{InputChange, Stimulus, StimulusCtx};
 use crate::time::{cycles_to_micros, micros_to_cycles};
-use avr_port_tests::board::{parse_hex, Board, PinState};
-use avr_port_tests::runtime::Handle;
-use avr_port_tests::{native_backend, Backend, Runtime, Value};
+use avr_sim::board::{parse_hex, Board, PinState};
+use avr_sim::runtime::Handle;
+use avr_sim::{native_backend, Backend, Runtime, Value};
 use std::any::Any;
 use std::cell::{Ref, RefCell, RefMut};
 use std::error::Error;
@@ -207,7 +207,7 @@ impl BreadboardHost {
     }
 
     /// State of the onboard LED: Arduino digital pin 13 (`PORTB5`).
-    pub fn led_builtin(&mut self) -> avr_port_tests::board::PinState {
+    pub fn led_builtin(&mut self) -> avr_sim::board::PinState {
         self.board
             .led_builtin(self.backend.as_ref(), &mut self.runtime)
     }

@@ -1,5 +1,0 @@
-{
-  "private": true,
-  "scripts": { "generate": "node convert.cjs", "check": "node convert.cjs --check" },
-  "devDependencies": { "typescript": "5.9.3" }
-}

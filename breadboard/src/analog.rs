@@ -24,9 +24,9 @@
 
 use crate::pin::{Pin, Port};
 use crate::spice::{deck_index, solve_op, DeckIndex, OpError, Solution};
-use avr_port_tests::board::{Board, PinState};
-use avr_port_tests::runtime::Handle;
-use avr_port_tests::{Backend, Runtime, Value};
+use avr_sim::board::{Board, PinState};
+use avr_sim::runtime::Handle;
+use avr_sim::{Backend, Runtime, Value};
 use std::collections::{BTreeMap, BTreeSet};
 use std::error::Error;
 use std::fmt;

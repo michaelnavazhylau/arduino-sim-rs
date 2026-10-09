@@ -59,9 +59,15 @@ Source of truth:
 Existing gates:
 
 ```sh
-bash rust_port/tools/verify-native.sh
-bash breadboard/tools/verify-breadboard.sh
+bash rust_port/tools/verify-native.sh          # avr-sim engine and its regressions
+bash breadboard/tools/verify-breadboard.sh     # host, scheduler, analog coupling, buses
 ```
+
+The converted AVR8js contract has its own gate in the separate
+[avr8js-parity](https://github.com/michaelnavazhylau/avr8js-parity) repository:
+it rejects any converted scenario that is `#[ignore]`d, then runs the contract in
+debug and release, and separately verifies deterministic conversion and source
+hashes against the pinned upstream submodule.
 
 Keep the solved forward/reverse LED operating points, the Ohm's-law and diode
 curve cross-check, the switch divider predictions, the threshold band and the
@@ -71,8 +77,12 @@ characterizations.
 
 ## Boundaries
 
-- **`rust_port`** keeps an empty `[dependencies]` table and its offline parity
-  gate. Nothing electrical may move into it.
+- **`avr-sim`** (`rust_port/`) keeps an empty `[dependencies]` table and its
+  offline gate. Nothing electrical may move into it. It also no longer carries
+  the generated AVR8js contract: that moved to
+  [avr8js-parity](https://github.com/michaelnavazhylau/avr8js-parity), so 27k
+  lines of generated scenarios cannot add a dependency or a lockfile entry here,
+  and regeneration never lands in this repository's history.
 - **`breadboard`** owns MCU pin drivers, board rails, threshold/ADC rules,
   timestamped external events and the analog/digital bridge. It owns the only
   ngspice-rs dependency.
@@ -112,8 +122,8 @@ regardless of which engine integrates the circuit.
 and ADC samples match analytic or captured reference traces at documented
 tolerances. Different GUI frame rates and headless execution give the same
 accepted waveform; pause advances neither clock. Pulses shorter than the current
-polling interval are not lost. Regression tests keep the AVR offline parity gate
-unchanged.
+polling interval are not lost. Regression tests keep the offline engine gate and
+the converted contract's gate unchanged.
 
 RC analytic checks remain the first vertical slice: for a zero-initial-voltage
 step, \(V_C(t) = V_S(1-e^{-t/RC})\) should be reproduced to within 0.5% of the
@@ -200,7 +210,7 @@ explicit errors.
 
 For each milestone: ship headless analytical or independent-reference tests,
 explicit invalid-input tests, documented model limits and a small runnable
-example before GUI polish. Run the electrical gate and the AVR parity gate
+example before GUI polish. Run the electrical gate and the AVR engine gate
 separately; new analysis work must not add dependencies to the core lockfile.
 Captured reference data may be produced by tools, but ordinary tests must not
 require a C ngspice build.

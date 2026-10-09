@@ -12,7 +12,7 @@
 //! the LED is lit by *solved current*, not by `led_on`. Rebuild and solve happen
 //! only when the drive mode or the LED polarity changes, never during rendering.
 
-use avr_port_tests::board::PinState;
+use avr_sim::board::PinState;
 use breadboard::{solve_op, LedPreset, OpError};
 use std::fmt::Write as _;
 

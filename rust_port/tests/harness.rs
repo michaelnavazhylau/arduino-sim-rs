@@ -1,15 +1,11 @@
 // SPDX-License-Identifier: MIT
 
-use avr_port_tests::{
+use avr_sim::{
     runtime::{deep_equal, Handle},
     scenario::*,
-    suites, Backend, Runtime, Value,
+    Backend, Runtime, Value,
 };
-use std::{
-    cell::RefCell,
-    collections::{BTreeMap, BTreeSet},
-    rc::Rc,
-};
+use std::{cell::RefCell, collections::BTreeMap, rc::Rc};
 
 /// Harness fixture only: deliberately not an AVR CPU or a passing simulator stub.
 #[derive(Default)]
@@ -133,37 +129,6 @@ fn vi(name: &'static str, args: Vec<Expr>) -> Expr {
 }
 fn equal(actual: Expr, expected: Expr) -> Step {
     at(1, check(actual, "toEqual", false, vec![expected]))
-}
-
-#[test]
-fn all_upstream_cases_and_assertions_are_present() {
-    let cases = suites::all_cases();
-    assert_eq!(cases.len(), 347);
-    assert_eq!(cases.iter().map(|c| c.assertions).sum::<usize>(), 853);
-    let mut names = BTreeSet::new();
-    let mut sources = BTreeSet::new();
-    for case in cases {
-        assert!(
-            names.insert((case.source, case.name)),
-            "duplicate case {}",
-            case.name
-        );
-        sources.insert(case.source);
-        assert!(case.line > 0);
-        assert!(!case.body.is_empty());
-        assert_eq!(
-            assertion_count(&case.body),
-            case.assertions,
-            "{}",
-            case.name
-        );
-        assert_eq!(
-            assertion_count(&case.setup),
-            0,
-            "unexpected assertion in setup"
-        );
-    }
-    assert_eq!(sources.len(), 14);
 }
 
 #[test]
@@ -533,7 +498,7 @@ fn failed_assertions_report_source_line() {
 fn native_backend_fails_on_unimplemented_operations() {
     // The native backend is real, but it must never fabricate default objects for
     // an operation it does not actually implement.
-    let mut runtime = Runtime::new(avr_port_tests::native_backend());
+    let mut runtime = Runtime::new(avr_sim::native_backend());
     execute(
         &mut runtime,
         vec![at(1, bind("x", new("NotAnAvrObject", vec![])))],

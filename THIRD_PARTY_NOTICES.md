@@ -9,11 +9,15 @@ Nothing listed on this page is redistributed in this repository.
 
 ## AVR8js — derived work (MIT)
 
-The native simulator (`rust_port/src/sim/`), the scenario runner
-(`rust_port/src/runtime.rs`) and the converted behavioral suites
-(`rust_port/src/suites/`) are derived from AVR8js
+The native simulator (`rust_port/src/sim/`) and the scenario runner
+(`rust_port/src/runtime.rs`) are derived from AVR8js
 (<https://github.com/wokwi/avr8js>), pinned as a submodule at revision
 `bee6f0a94e0e27786f6bc21aee3c775849fb50fd`.
+
+The converted behavioral suites — the largest derived work — live in the separate
+[`avr8js-parity`](https://github.com/michaelnavazhylau/avr8js-parity)
+repository, which pins the same upstream revision as a live submodule and carries
+its own copy of the upstream notice.
 
 The upstream notice is retained below and in [`rust_port/LICENSE`](rust_port/LICENSE),
 and individual derived files carry an SPDX header identifying the upstream
@@ -70,8 +74,9 @@ count and SHA-256 hash — is published, in
 
 ## Rust dependencies
 
-`rust_port` has an empty `[dependencies]` table, so no third-party Rust code is
-compiled into the AVR simulator, its test harness or its parity gate.
+The `avr-sim` crate in [`rust_port/`](rust_port/) has an empty `[dependencies]`
+table, so no third-party Rust code is compiled into the AVR simulator, its
+scenario runner or its gate.
 
 The headless [`breadboard/`](breadboard/) host and the optional
 [`blink-gui/`](blink-gui/) demo do pull in third-party Rust code, both fetched
@@ -94,7 +99,7 @@ None of them are part of this repository.
 
 Because of that dependency, `breadboard` — and therefore `blink-gui` — is no
 longer buildable `--offline` on a cold Cargo registry. `rust_port` keeps its
-empty `[dependencies]` table, so the offline AVR parity gate is unaffected.
+empty `[dependencies]` table, so the offline engine gate is unaffected.
 
 ### raylib — not redistributed
 
@@ -108,6 +113,7 @@ of compiling a vendored copy, so no raylib source is redistributed here.
 
 ## Development tooling — not distributed
 
-Node/TypeScript is used only to regenerate the converted scenarios under
-`rust_port/tools/`, pinned through `package-lock.json`. It is not part of the
-simulator or of any produced artifact.
+Node/TypeScript is used only to regenerate the converted scenarios, in the
+separate [`avr8js-parity`](https://github.com/michaelnavazhylau/avr8js-parity)
+repository, pinned through `tools/package-lock.json`. It is not part of the
+simulator, of the contract that is compiled, or of any produced artifact.

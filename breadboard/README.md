@@ -1,10 +1,11 @@
 # breadboard
 
 Headless host, simulated-time scheduler and external components for the native
-AVR simulator. It depends on the sibling [`rust_port`](../rust_port/) AVR core
-and on [ngspice-rs](https://github.com/michaelnavazhylau/ngspice-rs) for
+AVR simulator. It depends on the `avr-sim` crate in the sibling
+[`rust_port`](../rust_port/) directory and on
+[ngspice-rs](https://github.com/michaelnavazhylau/ngspice-rs) for
 operating-point solves; there is no GUI or renderer here, and nothing in this
-crate is a dependency of the AVR parity gate.
+crate is a dependency of the offline engine gate.
 
 ## Why this crate exists
 

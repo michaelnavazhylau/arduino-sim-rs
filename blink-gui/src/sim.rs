@@ -6,8 +6,8 @@
 //! boundary; the external LED is lit by solved current, not `led_on`.
 
 use crate::analog::BlinkCircuit;
-use avr_port_tests::board::{parse_hex, Board, PinState, LED_BUILTIN_PIN, UNO_CLOCK_HZ};
-use avr_port_tests::{native_backend, Backend, Runtime};
+use avr_sim::board::{parse_hex, Board, PinState, LED_BUILTIN_PIN, UNO_CLOCK_HZ};
+use avr_sim::{native_backend, Backend, Runtime};
 use std::rc::Rc;
 
 /// Firmware built from `sketches/blink/blink.ino` for `arduino:avr:uno`.
@@ -143,7 +143,7 @@ impl Sim {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use avr_port_tests::Value;
+    use avr_sim::Value;
 
     #[test]
     fn compiled_blink_drives_current_and_reverse_polarity_is_independent_of_gpio() {

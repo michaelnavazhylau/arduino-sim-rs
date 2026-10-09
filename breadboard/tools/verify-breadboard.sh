@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Headless gate for the breadboard host, scheduler, analog coupling and
-# external components. Separate from the AVR parity gate: this crate is allowed
+# external components. Separate from the AVR engine gate: this crate is allowed
 # to depend on the AVR core and on the ngspice-rs electrical backend, but the
 # core must not depend on it.
 set -euo pipefail

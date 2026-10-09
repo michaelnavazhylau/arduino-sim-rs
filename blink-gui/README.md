@@ -131,15 +131,16 @@ value.
 
 ## Why it lives here, not in `rust_port`
 
-This crate is deliberately **outside** the `rust_port` package:
+This crate is deliberately **outside** the `rust_port` package (the `avr-sim`
+crate):
 
-- `rust_port` stays dependency-free, so its `--locked --offline` CI gate
-  (`tools/verify-native.sh`, `native-parity.yml`, `arduino-cli.yml`) keeps
+- `avr-sim` stays dependency-free, so its `--locked --offline` CI gates
+  (`tools/verify-native.sh`, `native-parity.yml`, `arduino-cli.yml`) keep
   passing unchanged. Adding raylib there would pull roughly 40 crates into that
   lockfile and require vendoring for the offline jobs.
 - The raylib dependency is confined to a demo, not the parity contract.
 - Nothing here is part of the AVR8js compatibility surface. All simulator access
-  goes through `avr_port_tests::board`.
+  goes through `avr_sim::board`.
 
 For the same reason this crate is not wired into CI: the parity runners are
 headless Ubuntu images, and raylib needs a GPU/display context.
@@ -269,7 +270,7 @@ arduino-cli compile -b arduino:avr:uno --build-path build sketches/switch_pulldo
 cp build/switch_pulldown.ino.hex firmware/switch_pulldown.hex
 ```
 
-Everything is loaded through `avr_port_tests::board::parse_hex`, which rejects a
+Everything is loaded through `avr_sim::board::parse_hex`, which rejects a
 bad checksum or an over-long image rather than fabricating flash contents.
 
 ## How the simulator is driven

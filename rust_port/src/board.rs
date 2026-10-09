@@ -2,8 +2,9 @@
 
 //! Host-side glue for running a real ATmega328P firmware image.
 //!
-//! The converted scenarios in `src/suites/` describe AVR8js behavior through the
-//! dynamic [`Backend`] API. A host that only wants to *run* an Arduino sketch —
+//! The converted scenarios in the separate `avr8js-parity` repository describe
+//! AVR8js behavior through the dynamic [`Backend`] API. A host that only wants to
+//! *run* an Arduino sketch —
 //! a GUI, a CLI, an integration harness — would otherwise repeat the same Intel
 //! HEX parsing and peripheral wiring. This module owns that glue once.
 //!

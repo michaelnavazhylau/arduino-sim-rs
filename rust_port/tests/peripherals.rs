@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 
 //! Edge-case and reentry regressions beyond the pinned upstream scenarios.
-use avr_port_tests::{native_backend, runtime::Handle, scenario::*, Backend, Case, Runtime, Value};
+use avr_sim::{native_backend, runtime::Handle, scenario::*, Backend, Case, Runtime, Value};
 use std::{
     panic::{catch_unwind, AssertUnwindSafe},
     rc::Rc,

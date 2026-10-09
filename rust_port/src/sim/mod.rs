@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) Uri Shaked and contributors
 
-//! Native Rust AVR simulator used by the converted behavior scenarios.
+//! Native Rust AVR simulator used by the converted behavior scenarios. Those
+//! scenarios, the converter that produces them and the pinned upstream revision
+//! live in the separate `avr8js-parity` repository.
 //!
 //! This is the real backend behind [`crate::native_backend`]: no JavaScript, no
 //! bridge. Milestones 0–6 in `specs/backend-plan.md` implement the converted

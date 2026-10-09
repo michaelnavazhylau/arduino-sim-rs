@@ -3,5 +3,5 @@
 version = 4
 
 [[package]]
-name = "avr-port-tests"
+name = "avr-sim"
 version = "0.1.0"

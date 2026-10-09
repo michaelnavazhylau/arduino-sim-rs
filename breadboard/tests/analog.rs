@@ -7,7 +7,7 @@
 //! one: DDR/PORT -> pin mode -> MCU driver in the deck -> `.op` solve -> ADC mux
 //! channels and `PINx` back to the AVR.
 
-use avr_port_tests::sim::assembler::assemble;
+use avr_sim::sim::assembler::assemble;
 use breadboard::{
     AnalogCoupling, AnalogReading, BreadboardHost, CouplingError, CouplingOutcome, HostError,
     LedPreset, Pin, Scene, Wiring,

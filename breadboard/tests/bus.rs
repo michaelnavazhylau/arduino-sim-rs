@@ -26,7 +26,7 @@ fn host() -> BreadboardHost {
 
 /// A minimal halt loop, so the CPU never disturbs the registers under test.
 fn breadboard_test_flash() -> Vec<u8> {
-    use avr_port_tests::sim::assembler::assemble;
+    use avr_sim::sim::assembler::assemble;
     let result = assemble("loop: JMP loop");
     assert!(result.errors.is_empty(), "assembler: {:?}", result.errors);
     let mut flash = vec![0xffu8; 0x8000];

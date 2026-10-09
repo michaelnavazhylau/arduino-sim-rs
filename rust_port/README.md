@@ -1,11 +1,19 @@
-# Native Rust test contract for the AVR port
+# avr-sim — native Rust AVR simulator core
 
-All **14 AVR8js TypeScript test suites**, **347 test cases**, and **853 assertion
-sites** have been converted into typed Rust scenarios. The original `../avr8js/`
-implementation and tests are untouched. The native Rust backend now implements
-assembler, CPU/instructions/interrupts, clock, GPIO, megaAVR timers, ATtiny
-Timer1, EEPROM, ADC, SPI, USART, TWI master states and watchdog. Milestones 0–6
-are complete. There is **no JavaScript runtime or JS bridge**.
+A dependency-free native Rust AVR8 simulator: assembler, CPU/instructions/
+interrupts, clock, GPIO, megaAVR timers, ATtiny Timer1, EEPROM, ADC, SPI, USART,
+TWI master states and watchdog. Backend milestones 0–6 are complete. There is
+**no JavaScript runtime and no JS bridge**.
+
+The crate also carries the typed scenario representation (`scenario.rs`) and its
+runner (`runtime.rs`) that express the port's behavior contract as Rust data
+rather than embedded JavaScript. The **generated** contract is not here. The 14
+converted AVR8js suites, 347 cases and 853 assertion sites live in
+[`avr8js-parity`](https://github.com/michaelnavazhylau/avr8js-parity) together
+with the converter that produces them and the pinned upstream revision they are
+asserted against, so 27k lines of machine-written scenarios no longer share a
+history or a lockfile with this crate. `avr-sim` keeps an empty `[dependencies]`
+table, which is what makes the offline gate hermetic and the crate publishable.
 
 ## Hardware and compatibility specifications
 
@@ -25,11 +33,10 @@ cargo fmt --check
 cargo clippy --all-targets --offline -- -D warnings
 ```
 
-**All 347 converted scenarios run and pass by default** (14 suites), with
-**zero ignored cases**. Another 4 assembler unit tests, 13 harness/coverage tests,
-8 original native regressions, 20 peripheral/recovery regressions and the
-toolchain-gated `arduino_cli` end-to-end check pass: **393 tests total** in both
-debug and release builds.
+**45 tests pass by default** in both debug and release: 4 assembler unit tests,
+12 harness regressions, 8 native regressions, 5 peripheral-recovery regressions,
+15 peripheral edge/reentry regressions and the toolchain-gated `arduino_cli`
+end-to-end check.
 
 `tests/arduino_cli.rs` compiles [`tests/arduino-cli/uno_probe`](tests/arduino-cli/uno_probe)
 with `arduino-cli` for `arduino:avr:uno` and executes the resulting HEX image on
@@ -39,49 +46,48 @@ stays hermetic; set `AVR_SIM_REQUIRE_ARDUINO_CLI=1` to make a missing toolchain 
 failure. The LED/millis timing assertion needs a multi-second simulation and runs
 in release builds.
 
-A green build validates the converted compatibility baseline, **not complete
-AVR8js API parity or hardware correctness**. Unsupported constructors and methods
-fail explicitly rather than fabricating simulator behavior.
+A green build validates this crate's own regressions, **not complete AVR8js API
+parity or hardware correctness**. Unsupported constructors and methods fail
+explicitly rather than fabricating simulator behavior.
 
 ```sh
-cargo test -- --list                       # discover every case
-cargo test peripherals_timer              # both native timer suites
-cargo test peripherals_spi                # native SPI suite
+cargo test -- --list                       # discover every test
+cargo test --test native                  # arithmetic flags, reentry, panic recovery
 cargo test --test peripherals             # peripheral edge/reentry regressions
 cargo test --test peripheral_recovery     # panic recovery and callback ordering
+cargo test --test harness                 # runner and harness regressions
 AVR_SIM_REQUIRE_ARDUINO_CLI=1 cargo test --release --test arduino_cli  # real HEX image
-bash tools/verify-native.sh               # full debug/release parity gate
+bash tools/verify-native.sh               # full debug/release engine gate
 ```
 
-There are no Cargo dependencies. Node/TypeScript is needed only to regenerate or
-check the conversion, never to compile or execute the Rust scenarios.
+There are no Cargo dependencies. Node/TypeScript is not needed to compile or
+execute anything here; it is used only in `avr8js-parity`, to regenerate and
+verify that repository's converted scenarios.
 
 ## Layout
 
-- `src/suites/`: one generated Rust module per original suite. Every case contains
-  setup, ordered operations, expected values, and source-line annotations.
-- `src/scenario.rs`: typed test operations, expressions, and assertion definitions.
-- `src/runtime.rs`: native Rust test runner, lexical callback captures, mock call
-  recording/reset, assertion evaluation, typed-array fixtures, assembly helpers,
-  and instruction-runner helpers. It implements only the test-language subset;
-  it does not evaluate JS text or emulate AVR hardware.
-- `src/lib.rs`: `native_backend()` constructs a fresh native simulator adapter.
 - `src/sim/`: assembler, CPU/executor, clock, GPIO, timers, EEPROM, ADC, SPI,
   USART, TWI and watchdog. `peripheral_adapter.rs` handles registry/callback
   ownership; `peripheral.rs` supplies common event and interrupt dispatch.
-- `tests/harness.rs`: executable harness regressions and inventory checks.
-- `tests/arduino_cli.rs`: compiles `tests/arduino-cli/uno_probe` with arduino-cli
-  and runs the produced ATmega328P HEX image on the native backend (see above).
+- `src/runtime.rs`: native Rust scenario runner, lexical callback captures, mock
+  call recording/reset, assertion evaluation, typed-array fixtures, assembly
+  helpers, and instruction-runner helpers. It implements only the test-language
+  subset; it does not evaluate JS text or emulate AVR hardware. It is also the
+  `Backend` contract that `breadboard` and `blink-gui` drive in production.
+- `src/scenario.rs`: typed test operations, expressions, and assertion definitions.
+- `src/board.rs`: host-side glue for running a real firmware image — Intel HEX
+  parsing and ATmega328P device wiring — without reimplementing AVR behavior.
+- `src/lib.rs`: `native_backend()` constructs a fresh native simulator adapter.
+- `tests/harness.rs`: executable harness and runner regressions.
 - `tests/native.rs`: arithmetic flags, synchronous callback reentry, panic recovery,
   hook fallback/chaining and Tiny PWM regression tests.
 - `tests/peripherals.rs`, `tests/peripheral_recovery.rs`: EEPROM protection,
   ADC references/differential conversion, serial timing/masking, watchdog modes,
   synchronous peripheral/CPU reentry, call-through spies and panic restoration.
-- `tools/verify-native.sh`: fail-closed native parity gate; CI additionally runs
-  converter `--check` against the pinned submodule.
-- `conversion-manifest.json`: source hashes, original names/lines, imports, case
-  mappings, and per-case assertion counts.
-- `tools/convert.cjs`: fail-closed AST converter, not a regex translation.
+- `tests/arduino_cli.rs`: compiles `tests/arduino-cli/uno_probe` with arduino-cli
+  and runs the produced ATmega328P HEX image on the native backend (see above).
+- `tools/verify-native.sh`: fail-closed engine gate.
+- `tools/specs.py`: fetches and verifies the pinned vendor datasheets in `specs/`.
 
 Scenarios are deliberately declarative rather than tied to speculative Rust CPU
 structs or `Rc<RefCell<CPU>>` ownership. The port can use a system/bus, owned
@@ -140,18 +146,21 @@ Important semantic requirements:
    visibly, never fabricate expected values. Harness fixtures are not native AVR
    implementations and must not be used as the real backend.
 
-Every current suite is in the converter's `IMPLEMENTED` set. For future
-extensions, enable suites only after native verification; regeneration preserves
-the intended gate. `tools/verify-native.sh` rejects ignored converted scenarios
-and uses `--include-ignored` in both builds as defense in depth. The GitHub Actions
-workflow also installs pinned TypeScript and checks regeneration/source hashes.
+Every suite in the converted contract is currently enabled. When extending the
+port, the contract's own gate rejects any converted scenario that is `#[ignore]`d,
+so coverage cannot silently shrink; `tools/verify-native.sh` does the same here
+and uses `--include-ignored` in both builds as defense in depth.
 
 Known groundwork limitations include adapter `Value` types in native event/hook
 storage, incomplete hook introspection, constructor-buffer sharing and untested
 parser/memory-boundary behavior. See the backend plan for remaining architecture
 and fidelity work.
 
-## Coverage
+## Contract coverage
+
+The engine satisfies every suite below. `avr8js-parity` holds the source of truth
+for the inventory — `conversion-manifest.json` records the upstream SHA-256 per
+file, and the generated modules themselves are the cases.
 
 | Suite | Cases | Assertions |
 | --- | ---: | ---: |
@@ -176,20 +185,16 @@ counts can differ. Each case gets fresh setup and inherited `beforeEach` hooks.
 Assembly templates, config overrides, issue-regression names, and numeric/floating
 expectations are preserved, including source typos and unusual assembler inputs.
 
-## Regenerate/check against upstream
+## Upstream reference and regeneration
 
-```sh
-cd rust_port/tools
-npm ci --ignore-scripts
-npm run generate
-npm run check
-```
+Baseline upstream revision: `bee6f0a94e0e27786f6bc21aee3c775849fb50fd`. This
+repository pins it as an uninitialized `avr8js/` submodule for provenance: it
+records which upstream revision the port's compatibility claims are written
+against, and `specs/backend-plan.md` cites its sources by path. Nothing here
+builds or executes it.
 
-The converter discovers every `src/**/*.spec.ts`, parses with pinned TypeScript,
-and emits rustfmt-formatted Rust. Unsupported executable syntax or matchers fail
-conversion. `--check` compares all output and source hashes without writing; an
-obsolete generated suite is also an error. No original tests are removed.
-
-Baseline upstream revision: `bee6f0a94e0e27786f6bc21aee3c775849fb50fd`.
-Per-file SHA-256 hashes in the manifest identify the actual input. Derived tests
-retain upstream attribution and the MIT license in `LICENSE`.
+Regeneration is owned by
+[`avr8js-parity`](https://github.com/michaelnavazhylau/avr8js-parity), which
+pins the same revision as a live submodule, carries `tools/convert.cjs`, and
+verifies determinism and source hashes with `npm run check`. Derived tests retain
+upstream attribution and the MIT license in `LICENSE`.
