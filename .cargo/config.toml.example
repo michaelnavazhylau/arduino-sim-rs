@@ -1,0 +1,35 @@
+# Optional local override: build breadboard and blink-gui against a sibling
+# `avr8rs` checkout instead of the published crate.
+#
+# By default the engine comes from crates.io, so an engine change needs a version
+# bump and a `cargo publish` before these crates can see it. While you are
+# iterating on the engine, copy this file to `.cargo/config.toml` (Git-ignored)
+# to compile against the checkout directly instead:
+#
+#     cp .cargo/config.toml.example .cargo/config.toml
+#
+# Cargo resolves paths in a config file relative to the directory containing
+# `.cargo` — the repository root here — so `../avr8rs` is the sibling checkout:
+#
+#     electronics-work/
+#       arduino-sim-rs/    this repository
+#       avr8rs/            the engine checkout
+#
+# A config file applies to `cargo` invocations from that directory and any
+# subdirectory, so this covers `breadboard/` and `blink-gui/` with no changes in
+# either. blink-gui's own `.cargo/config.toml` (raylib linker paths) still applies:
+# the two files set different tables and cargo merges them.
+#
+# While the patch is active, cargo rewrites Cargo.lock: the `avr8rs` entry loses
+# its `source` and `checksum`, because it is no longer a registry package. Do not
+# commit that. When the engine work is done, delete this file and restore the
+# locks:
+#
+#     rm .cargo/config.toml
+#     git checkout -- breadboard/Cargo.lock blink-gui/Cargo.lock
+#
+# CI never sees this file, so its `--locked` gates keep resolving the published
+# crate. `avr8js-parity` needs none of this — it depends on the checkout by path
+# already, because its job is to gate *unreleased* engine commits.
+[patch.crates-io]
+avr8rs = { path = "../avr8rs" }

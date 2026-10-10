@@ -29,6 +29,30 @@ cargo test --release --locked
 The engine is a crates.io dependency, so no submodule initialization is needed
 and a cold clone builds from the registry.
 
+## Working on the engine
+
+Because the engine is consumed by version, an engine change is visible here only
+after a version bump and a `cargo publish`. While you are iterating on it, you can
+compile against a sibling checkout instead:
+
+```sh
+cp .cargo/config.toml.example .cargo/config.toml     # points at ../avr8rs
+```
+
+Cargo then builds `breadboard` and `blink-gui` against that checkout, picking up
+uncommitted engine edits with no publish. Two things to know:
+
+- The override rewrites `Cargo.lock`: the `avr8rs` entry stops being a registry
+  package, so it loses its `source` and `checksum`. Don't commit that — when the
+  engine work is done, `rm .cargo/config.toml` and
+  `git checkout -- breadboard/Cargo.lock blink-gui/Cargo.lock`.
+- CI never sees the file, so its `--locked` gates keep resolving the published
+  crate.
+
+[`avr8js-parity`](https://github.com/michaelnavazhylau/avr8js-parity) needs none of
+this: it depends on the checkout by path already, because its job is to gate
+*unreleased* engine commits.
+
 ## Layout and status
 
 This repository holds the front-end. The engine and the converted contract are

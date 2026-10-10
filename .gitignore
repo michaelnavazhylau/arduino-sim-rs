@@ -2,3 +2,5 @@
 .env
 .env.*
 /js_clone/
+# Local engine-development override; see .cargo/config.toml.example.
+/.cargo/config.toml
