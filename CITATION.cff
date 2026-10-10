@@ -1,13 +1,13 @@
 cff-version: 1.2.0
-message: "If you use this software, please cite it using the metadata below."
-title: "arduino-sim-rs: AVR8js-compatible simulator, engine and raylib front-end"
+message: "If you use this software in your work, please cite it using the metadata below."
+title: "arduino-sim-rs: headless breadboard host and raylib GUI for the avr8rs AVR simulator"
 abstract: >-
-  A native Rust AVR8 (ATmega328P-class) simulator compatibility port, validated
-  against the AVR8js behavioral test suite and against firmware compiled by
-  arduino-cli for Arduino UNO boards. The dependency-free simulator engine is the
-  `avr8rs` crate, developed in its own repository and consumed here from
-  crates.io; this repository holds the headless breadboard host and the raylib
-  front-end.
+  The front-end for a native Rust AVR8 (ATmega328P-class) simulator: a headless
+  breadboard host with simulated-time scheduling, external components and
+  SPICE-deck electrical coupling, plus a raylib GUI that runs real Arduino
+  sketches. The simulator engine itself is the `avr8rs` crate, developed in its
+  own repository and consumed here from crates.io; the compatibility baseline it
+  is validated against lives in `avr8js-parity`.
 type: software
 authors:
   - family-names: Navazhylau
@@ -23,7 +23,7 @@ keywords:
   - emulator
   - Rust
   - Arduino
-  - embedded
+  - raylib
 references:
   - type: software
     title: "avr8rs: dependency-free native Rust AVR8 simulator core"
@@ -35,6 +35,16 @@ references:
     notes: >-
       The simulator engine this front-end consumes by version.
   - type: software
+    title: "avr8js-parity: the converted AVR8js behavioral contract"
+    authors:
+      - family-names: Navazhylau
+        given-names: Michael
+    repository-code: "https://github.com/michaelnavazhylau/avr8js-parity"
+    license: MIT
+    notes: >-
+      The 347-case AVR8js contract the engine is validated against. This
+      front-end sits outside that compatibility surface.
+  - type: software
     title: "AVR8js: AVR 8-bit microcontroller simulator in TypeScript"
     authors:
       - family-names: Shaked
@@ -42,5 +52,6 @@ references:
     repository-code: "https://github.com/wokwi/avr8js"
     license: MIT
     notes: >-
-      Upstream reference for this compatibility port; the converted behavioral
-      suites and the decoder logic are derived from it.
+      Upstream reference the engine's decoder logic is derived from, via
+      avr8rs, which pins it at revision
+      bee6f0a94e0e27786f6bc21aee3c775849fb50fd.
